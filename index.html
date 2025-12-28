@@ -398,7 +398,7 @@
         <button class="nav-item" onclick="app.showSettings()">
             <svg viewBox="0 0 24 24">
                 <path
-                    d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
             </svg>
         </button>
     </header>
@@ -477,10 +477,26 @@
                     children: [
                         { id: crypto.randomUUID(), name: 'Child 1', color: 'var(--col-teal)' }
                     ],
+                    customMedicines: [],
                     logs: [],
                     settings: { timeFormat: '12h' }
                 };
                 this.save();
+            }
+
+            addCustomMed(name) {
+                if (!this.data.customMedicines) this.data.customMedicines = [];
+                if (!this.data.customMedicines.includes(name)) {
+                    this.data.customMedicines.push(name);
+                    this.save();
+                }
+            }
+
+            removeCustomMed(name) {
+                if (this.data.customMedicines) {
+                    this.data.customMedicines = this.data.customMedicines.filter(m => m !== name);
+                    this.save();
+                }
             }
 
             addChild(name) {
@@ -629,14 +645,15 @@
                     </div>`;
                         } else {
                             timerHtml = `<div class="card" style="background:#F1F8E9; border-left: 5px solid var(--col-olive);">
-                        <div class="log-title" style="color:var(--col-olive)">Safe to give medicine</div>
-                        <div class="text-small">${last.data.frequencyHours}h passed since last dose</div>
+                        <div class="log-title" style="color:var(--col-olive)">${last.data.frequencyHours}+ hours have passed</div>
+                        <div class="text-small">Since last dose of ${last.data.medicineName}</div>
                     </div>`;
                         }
                     }
                 }
 
                 const commonMeds = ['Tylenol', 'Motrin', 'Albuterol', 'Zofran', 'Pedialyte', 'Simethicone', 'Zyrtec'];
+                const customMeds = store.data.customMedicines || [];
 
                 container.innerHTML += `
             ${timerHtml}
@@ -645,6 +662,12 @@
                 ${commonMeds.map(med =>
                     `<button class="medicine-btn" onclick="app.openMedForm('${med}')">
                         <span>${med}</span>
+                     </button>`
+                ).join('')}
+                ${customMeds.map(med =>
+                    `<button class="medicine-btn" style="position:relative;" onclick="app.openMedForm('${med}')">
+                        <span>${med}</span>
+                        <div onclick="event.stopPropagation(); app.removeCustomMed('${med}')" style="position:absolute; top:2px; right:5px; font-size:1.2rem; color:var(--col-text-muted); padding:5px;">&times;</div>
                      </button>`
                 ).join('')}
                 <button class="medicine-btn" onclick="app.openMedForm('')">
@@ -718,6 +741,12 @@
                 const timeVal = document.getElementById('med-time').value;
                 const timeGiven = new Date(timeVal).getTime();
 
+                // Add to custom meds if not in default list
+                const commonMeds = ['Tylenol', 'Motrin', 'Albuterol', 'Zofran', 'Pedialyte', 'Simethicone', 'Zyrtec'];
+                if (!commonMeds.includes(name)) {
+                    store.addCustomMed(name);
+                }
+
                 store.addLog({
                     type: 'MEDICINE',
                     childId: state.activeChildId,
@@ -768,7 +797,7 @@
                     </select>
                 </div>
                  <div class="input-group">
-                    <label>Urination (Wet Diapers)</label>
+                    <label>Urination</label>
                     <select id="metric-urine" onchange="app.saveMetric('urine', this.value)">
                         <option value="">-- Select --</option>
                         <option value="Normal">Normal</option>
@@ -989,7 +1018,7 @@
                     const time = new Date(log.timeGiven).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                     if (log.type === 'MEDICINE') {
-                        text += `${time} - MED: ${log.data.medicineName} (${log.data.dosage || 'No dose'})\n`;
+                        text += `${time} - MED: ${log.data.medicineName}${log.data.dosage ? ' (' + log.data.dosage + ')' : ''}\n`;
                     } else if (log.type === 'SYMPTOM') {
                         let det = [];
                         if (log.data.temp) det.push(`Temp: ${log.data.temp}`);
@@ -1008,11 +1037,30 @@
                 navigator.clipboard.writeText(text).then(() => alert('Report copied to clipboard!'));
             },
 
-            showSettings() {
-                if (confirm('Reset all data? This cannot be undone.')) {
-                    localStorage.removeItem(DB_KEY);
-                    location.reload();
+            removeCustomMed(name) {
+                if (confirm('Remove this custom medicine shortcut?')) {
+                    store.removeCustomMed(name);
+                    this.navigate('meds');
                 }
+            },
+
+            showSettings() {
+                const modal = document.getElementById('add-modal');
+                const body = document.getElementById('modal-body');
+                document.getElementById('modal-title').innerText = 'About & Settings';
+
+                body.innerHTML = `
+                    <h3>Disclaimer</h3>
+                    <div style="background:#FDFBF7; padding:10px; border:1px solid #E0E0E0; border-radius:8px; font-size:0.85rem; color:#555; margin-bottom:20px;">
+                        <p><strong>Educational Use Only:</strong> This tool is designed for educational and personal organization purposes only. It does not provide medical advice.</p>
+                        <p><strong>As Is:</strong> This software is provided "as is", without warranty of any kind. The developers are not liable for any errors or data loss.</p>
+                        <p><strong>Consult a Doctor:</strong> Always consult with a qualified healthcare provider for medical advice and dosage instructions.</p>
+                    </div>
+
+                    <button class="btn btn-danger" onclick="if(confirm('Reset ALL data? This cannot be undone.')) { localStorage.removeItem(DB_KEY); location.reload(); }">Reset All Data</button>
+                    <button class="btn btn-secondary" style="margin-top:10px;" onclick="app.closeModal()">Close</button>
+                `;
+                modal.classList.add('open');
             },
 
             closeModal() {
