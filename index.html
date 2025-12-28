@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9,7 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
-    
+
     <style>
         :root {
             /* Mid-Century Modern Palette */
@@ -17,24 +18,27 @@
             --col-surface: #FFFFFF;
             --col-text-main: #2B2B2B;
             --col-text-muted: #666666;
-            
+
             --col-teal: #3A7D80;
             --col-teal-dark: #2A5A5C;
             --col-mustard: #ECB85D;
             --col-olive: #7C904E;
             --col-orange: #D16D48;
             --col-gray-light: #E0E0E0;
-            
+
             --spacing-unit: 8px;
             --radius-md: 12px;
             --radius-lg: 20px;
-            
-            --shadow-card: 0 4px 12px rgba(0,0,0,0.05);
+
+            --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
             --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             background-color: var(--col-bg);
             color: var(--col-text-main);
@@ -44,21 +48,43 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* App-like feel */
+            overflow: hidden;
+            /* App-like feel */
         }
 
         /* --- Typography --- */
-        h1, h2, h3 { margin: 0; font-weight: 700; }
-        h1 { font-size: 1.5rem; color: var(--col-teal-dark); }
-        h2 { font-size: 1.25rem; margin-bottom: 1rem; }
-        p { margin: 0 0 1rem 0; line-height: 1.5; }
-        .text-small { font-size: 0.875rem; color: var(--col-text-muted); }
+        h1,
+        h2,
+        h3 {
+            margin: 0;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--col-teal-dark);
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+        }
+
+        .text-small {
+            font-size: 0.875rem;
+            color: var(--col-text-muted);
+        }
 
         /* --- Layout --- */
         header {
             background: var(--col-surface);
             padding: calc(var(--spacing-unit) * 2);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             z-index: 10;
             display: flex;
             justify-content: space-between;
@@ -69,7 +95,8 @@
             flex: 1;
             overflow-y: auto;
             padding: calc(var(--spacing-unit) * 2);
-            padding-bottom: 80px; /* Space for fab/nav */
+            padding-bottom: 80px;
+            /* Space for fab/nav */
         }
 
         #bottom-nav {
@@ -95,8 +122,17 @@
             cursor: pointer;
             gap: 4px;
         }
-        .nav-item.active { color: var(--col-teal); font-weight: 600; }
-        .nav-item svg { width: 24px; height: 24px; fill: currentColor; }
+
+        .nav-item.active {
+            color: var(--col-teal);
+            font-weight: 600;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
 
         /* --- Components --- */
         .card {
@@ -123,11 +159,32 @@
             gap: 8px;
             transition: transform 0.1s;
         }
-        .btn:active { transform: scale(0.98); }
-        .btn-outline { background: transparent; border: 2px solid var(--col-teal); color: var(--col-teal); }
-        .btn-secondary { background: var(--col-gray-light); color: var(--col-text-main); }
-        .btn-danger { background: var(--col-orange); color: white; }
-        .btn-small { padding: 8px 16px; font-size: 0.9rem; width: auto; }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--col-teal);
+            color: var(--col-teal);
+        }
+
+        .btn-secondary {
+            background: var(--col-gray-light);
+            color: var(--col-text-main);
+        }
+
+        .btn-danger {
+            background: var(--col-orange);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            width: auto;
+        }
 
         .child-selector {
             display: flex;
@@ -135,10 +192,14 @@
             overflow-x: auto;
             padding-bottom: 5px;
             margin-bottom: 15px;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
+            /* Firefox */
         }
-        .child-selector::-webkit-scrollbar { display: none; }
-        
+
+        .child-selector::-webkit-scrollbar {
+            display: none;
+        }
+
         .child-chip {
             background: var(--col-surface);
             border: 2px solid var(--col-gray-light);
@@ -149,6 +210,7 @@
             color: var(--col-text-muted);
             cursor: pointer;
         }
+
         .child-chip.active {
             border-color: var(--col-teal);
             background: var(--col-teal);
@@ -161,8 +223,9 @@
             gap: 12px;
             margin-bottom: 20px;
         }
-        
-        .medicine-btn, .symptom-btn {
+
+        .medicine-btn,
+        .symptom-btn {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -177,14 +240,27 @@
             transition: all 0.2s;
             cursor: pointer;
         }
-        .medicine-btn.selected, .symptom-btn.selected {
+
+        .medicine-btn.selected,
+        .symptom-btn.selected {
             border-color: var(--col-teal);
             background-color: #E0F2F1;
         }
 
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
-        .input-group input, .input-group select, .input-group textarea {
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid var(--col-gray-light);
@@ -200,17 +276,60 @@
             padding: 12px 0;
             border-bottom: 1px solid var(--col-gray-light);
         }
-        .log-item:last-child { border-bottom: none; }
-        .log-time { font-weight: 600; color: var(--col-teal-dark); font-size: 0.9rem; }
-        .log-details { padding: 0 10px; }
-        .log-title { font-weight: 600; font-size: 1rem; }
-        .log-subtitle { font-size: 0.85rem; color: var(--col-text-muted); }
-        .log-actions button { background: none; border: none; font-size: 1.2rem; padding: 5px; cursor: pointer; }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            font-weight: 600;
+            color: var(--col-teal-dark);
+            font-size: 0.9rem;
+        }
+
+        .log-details {
+            padding: 0 10px;
+        }
+
+        .log-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .log-subtitle {
+            font-size: 0.85rem;
+            color: var(--col-text-muted);
+        }
+
+        .log-actions button {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            padding: 5px;
+            cursor: pointer;
+        }
 
         /* --- Views --- */
-        .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
         /* Floating Action Button (Optional, not currently using but good to have class) */
         .fab {
@@ -222,7 +341,7 @@
             border-radius: 50%;
             background: var(--col-mustard);
             color: var(--col-text-main);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -235,18 +354,25 @@
             padding: 40px 20px;
             color: var(--col-text-muted);
         }
-        
+
         /* Modal */
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 200;
             align-items: center;
             justify-content: center;
         }
-        .modal.open { display: flex; }
+
+        .modal.open {
+            display: flex;
+        }
+
         .modal-content {
             background: var(--col-surface);
             border-radius: var(--radius-lg);
@@ -256,233 +382,255 @@
             max-height: 90vh;
             overflow-y: auto;
         }
-        .modal-actions { margin-top: 20px; display: flex; gap: 10px; }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
+
 <body>
 
-<header>
-    <h1>KiddyMeds</h1>
-    <button class="nav-item" onclick="app.showSettings()">
-        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-    </button>
-</header>
+    <header>
+        <h1>KiddyMeds</h1>
+        <button class="nav-item" onclick="app.showSettings()">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
+        </button>
+    </header>
 
-<main id="app-content">
-    <!-- Views will be injected here -->
-</main>
+    <main id="app-content">
+        <!-- Views will be injected here -->
+    </main>
 
-<nav id="bottom-nav">
-    <button class="nav-item active" onclick="app.navigate('meds')">
-        <svg viewBox="0 0 24 24"><path d="M6 13c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm6-10C9.8 3 8 4.8 8 7s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm6 10c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z"/></svg>
-        <span>Meds</span>
-    </button>
-    <button class="nav-item" onclick="app.navigate('symptoms')">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-        <span>Symptoms</span>
-    </button>
-    <button class="nav-item" onclick="app.navigate('history')">
-        <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-        <span>History</span>
-    </button>
-    <button class="nav-item" onclick="app.navigate('reports')">
-        <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-4-9H6c-1.1 0-2 .9-2 2v2h16V5c0-1.1-.9-2-2-2z"/></svg>
-        <span>Report</span>
-    </button>
-</nav>
+    <nav id="bottom-nav">
+        <button class="nav-item active" onclick="app.navigate('meds')">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M6 13c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm6-10C9.8 3 8 4.8 8 7s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm6 10c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z" />
+            </svg>
+            <span>Meds</span>
+        </button>
+        <button class="nav-item" onclick="app.navigate('symptoms')">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+            </svg>
+            <span>Symptoms</span>
+        </button>
+        <button class="nav-item" onclick="app.navigate('history')">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+            </svg>
+            <span>History</span>
+        </button>
+        <button class="nav-item" onclick="app.navigate('reports')">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-4-9H6c-1.1 0-2 .9-2 2v2h16V5c0-1.1-.9-2-2-2z" />
+            </svg>
+            <span>Report</span>
+        </button>
+    </nav>
 
-<!-- Modals -->
-<div id="add-modal" class="modal">
-    <div class="modal-content">
-        <h2 id="modal-title">Add Entry</h2>
-        <div id="modal-body"></div>
+    <!-- Modals -->
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Add Entry</h2>
+            <div id="modal-body"></div>
+        </div>
     </div>
-</div>
 
-<script>
-/**
- * APP LOGIC
- */
-const DB_KEY = 'kiddymeds_db_v1';
+    <script>
+        /**
+         * APP LOGIC
+         */
+        const DB_KEY = 'kiddymeds_db_v1';
 
-class Store {
-    constructor() {
-        this.data = this.load();
-        if (!this.data.children || this.data.children.length === 0) {
-            this.seedData();
-        }
-    }
+        class Store {
+            constructor() {
+                this.data = this.load();
+                if (!this.data.children || this.data.children.length === 0) {
+                    this.seedData();
+                }
+            }
 
-    load() {
-        try {
-            return JSON.parse(localStorage.getItem(DB_KEY)) || {};
-        } catch (e) {
-            return {};
-        }
-    }
+            load() {
+                try {
+                    return JSON.parse(localStorage.getItem(DB_KEY)) || {};
+                } catch (e) {
+                    return {};
+                }
+            }
 
-    save() {
-        localStorage.setItem(DB_KEY, JSON.stringify(this.data));
-    }
+            save() {
+                localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+            }
 
-    seedData() {
-        this.data = {
-            children: [
-                { id: crypto.randomUUID(), name: 'Child 1', color: 'var(--col-teal)' }
-            ],
-            logs: [],
-            settings: { timeFormat: '12h' }
-        };
-        this.save();
-    }
+            seedData() {
+                this.data = {
+                    children: [
+                        { id: crypto.randomUUID(), name: 'Child 1', color: 'var(--col-teal)' }
+                    ],
+                    logs: [],
+                    settings: { timeFormat: '12h' }
+                };
+                this.save();
+            }
 
-    addChild(name) {
-        this.data.children.push({ id: crypto.randomUUID(), name, color: 'var(--col-teal)' });
-        this.save();
-    }
-    
-    deleteChild(id) {
-         this.data.children = this.data.children.filter(c => c.id !== id);
-         this.save();
-    }
+            addChild(name) {
+                this.data.children.push({ id: crypto.randomUUID(), name, color: 'var(--col-teal)' });
+                this.save();
+            }
 
-    addLog(entry) {
-        this.data.logs.push({ ...entry, id: crypto.randomUUID(), timestamp: Date.now() });
-        this.save();
-    }
+            deleteChild(id) {
+                this.data.children = this.data.children.filter(c => c.id !== id);
+                this.save();
+            }
 
-    deleteLog(id) {
-        this.data.logs = this.data.logs.filter(l => l.id !== id);
-        this.save();
-    }
+            addLog(entry) {
+                this.data.logs.push({ ...entry, id: crypto.randomUUID(), timestamp: Date.now() });
+                this.save();
+            }
 
-    updateLog(id, updates) {
-        const idx = this.data.logs.findIndex(l => l.id === id);
-        if (idx !== -1) {
-            this.data.logs[idx] = { ...this.data.logs[idx], ...updates };
-            this.save();
-        }
-    }
+            deleteLog(id) {
+                this.data.logs = this.data.logs.filter(l => l.id !== id);
+                this.save();
+            }
 
-    getLogs() {
-        return this.data.logs.sort((a, b) => b.timeGiven - a.timeGiven); // Descending
-    }
-}
+            updateLog(id, updates) {
+                const idx = this.data.logs.findIndex(l => l.id === id);
+                if (idx !== -1) {
+                    this.data.logs[idx] = { ...this.data.logs[idx], ...updates };
+                    this.save();
+                }
+            }
 
-const store = new Store();
-
-// --- STATE ---
-let state = {
-    activeChildId: store.data.children[0]?.id || null,
-    currentView: 'meds'
-};
-
-// --- APP OBJECT ---
-const app = {
-    init() {
-        this.renderChildSelector();
-        this.navigate('meds');
-        this.registerSW();
-    },
-
-    registerSW() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('SW Registered'))
-                .catch(err => console.log('SW Failed', err));
-        }
-    },
-
-    navigate(viewId) {
-        state.currentView = viewId;
-        
-        // Update nav UI
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.querySelector(`.nav-item[onclick="app.navigate('${viewId}')"]`)?.classList.add('active');
-
-        // Render View
-        const content = document.getElementById('app-content');
-        content.innerHTML = '';
-        
-        // Add Child Selector at top for Tracking Views
-        if (['meds', 'symptoms', 'history'].includes(viewId)) {
-            const selector = document.createElement('div');
-            selector.className = 'child-selector';
-            selector.innerHTML = store.data.children.map(c => 
-                `<div class="child-chip ${c.id === state.activeChildId ? 'active' : ''}" 
-                      onclick="app.switchChild('${c.id}')">${c.name}</div>`
-            ).join('') + 
-            `<div class="child-chip" onclick="app.promptAddChild()">+ New</div>`;
-            content.appendChild(selector);
-        }
-
-        if (viewId === 'meds') this.renderMedsView(content);
-        else if (viewId === 'symptoms') this.renderSymptomsView(content);
-        else if (viewId === 'history') this.renderHistoryView(content);
-        else if (viewId === 'reports') this.renderReportsView(content);
-    },
-
-    switchChild(id) {
-        state.activeChildId = id;
-        this.navigate(state.currentView);
-    },
-
-    renderChildSelector() {
-        // Handled in navigate for dynamic updates
-    },
-
-    promptAddChild() {
-        const name = prompt("Enter child's name:");
-        if (name) {
-            store.addChild(name);
-            const newChild = store.data.children[store.data.children.length - 1];
-            state.activeChildId = newChild.id;
-            this.navigate(state.currentView);
-        }
-    },
-
-    // --- VIEW: MEDS ---
-    renderMedsView(container) {
-        const lastMeds = store.getLogs()
-            .filter(l => l.childId === state.activeChildId && l.type === 'MEDICINE')
-            .slice(0, 3); // Last 3 meds
-
-        // Next Dose Logic (Simple)
-        let timerHtml = '';
-        if (lastMeds.length > 0) {
-            const last = lastMeds[0];
-            const nextTime = new Date(last.timeGiven).getTime() + (4 * 60 * 60 * 1000); // Assume 4h for now
-            const diff = nextTime - Date.now();
-            
-            if (diff > 0) {
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                timerHtml = `<div class="card" style="background:#E0F2F1; border-left: 5px solid var(--col-teal);">
-                    <div class="log-title">Next dose in: ${hours}h ${mins}m</div>
-                    <div class="text-small">Suggestion basis: 4 hours from last ${last.data.medicineName}</div>
-                </div>`;
-            } else {
-                 timerHtml = `<div class="card" style="background:#F1F8E9; border-left: 5px solid var(--col-olive);">
-                    <div class="log-title" style="color:var(--col-olive)">Safe to give medicine</div>
-                    <div class="text-small">4+ hours since last dose</div>
-                </div>`;
+            getLogs() {
+                return this.data.logs.sort((a, b) => b.timeGiven - a.timeGiven); // Descending
             }
         }
 
-        const commonMeds = ['Tylenol', 'Motrin', 'Albuterol', 'Zofran'];
-        
-        container.innerHTML += `
+        const store = new Store();
+
+        // --- STATE ---
+        let state = {
+            activeChildId: store.data.children[0]?.id || null,
+            currentView: 'meds'
+        };
+
+        // --- APP OBJECT ---
+        const app = {
+            init() {
+                this.renderChildSelector();
+                this.navigate('meds');
+                this.registerSW();
+            },
+
+            registerSW() {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(() => console.log('SW Registered'))
+                        .catch(err => console.log('SW Failed', err));
+                }
+            },
+
+            navigate(viewId) {
+                state.currentView = viewId;
+
+                // Update nav UI
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                document.querySelector(`.nav-item[onclick="app.navigate('${viewId}')"]`)?.classList.add('active');
+
+                // Render View
+                const content = document.getElementById('app-content');
+                content.innerHTML = '';
+
+                // Add Child Selector at top for Tracking Views
+                if (['meds', 'symptoms', 'history'].includes(viewId)) {
+                    const selector = document.createElement('div');
+                    selector.className = 'child-selector';
+                    selector.innerHTML = store.data.children.map(c =>
+                        `<div class="child-chip ${c.id === state.activeChildId ? 'active' : ''}" 
+                      onclick="app.switchChild('${c.id}')">${c.name}</div>`
+                    ).join('') +
+                        `<div class="child-chip" onclick="app.promptAddChild()">+ New</div>`;
+                    content.appendChild(selector);
+                }
+
+                if (viewId === 'meds') this.renderMedsView(content);
+                else if (viewId === 'symptoms') this.renderSymptomsView(content);
+                else if (viewId === 'history') this.renderHistoryView(content);
+                else if (viewId === 'reports') this.renderReportsView(content);
+            },
+
+            switchChild(id) {
+                state.activeChildId = id;
+                this.navigate(state.currentView);
+            },
+
+            renderChildSelector() {
+                // Handled in navigate for dynamic updates
+            },
+
+            promptAddChild() {
+                const name = prompt("Enter child's name:");
+                if (name) {
+                    store.addChild(name);
+                    const newChild = store.data.children[store.data.children.length - 1];
+                    state.activeChildId = newChild.id;
+                    this.navigate(state.currentView);
+                }
+            },
+
+            // --- VIEW: MEDS ---
+            renderMedsView(container) {
+                const lastMeds = store.getLogs()
+                    .filter(l => l.childId === state.activeChildId && l.type === 'MEDICINE')
+                    .slice(0, 3); // Last 3 meds
+
+                // Next Dose Logic (based on manually entered frequency)
+                let timerHtml = '';
+                if (lastMeds.length > 0) {
+                    const last = lastMeds[0];
+                    if (last.data.frequencyHours) {
+                        const freqMs = last.data.frequencyHours * 60 * 60 * 1000;
+                        const nextTime = new Date(last.timeGiven).getTime() + freqMs;
+                        const diff = nextTime - Date.now();
+
+                        if (diff > 0) {
+                            const hours = Math.floor(diff / (1000 * 60 * 60));
+                            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            timerHtml = `<div class="card" style="background:#E0F2F1; border-left: 5px solid var(--col-teal);">
+                        <div class="log-title">Next dose in: ${hours}h ${mins}m</div>
+                        <div class="text-small">Based on ${last.data.frequencyHours}h schedule</div>
+                    </div>`;
+                        } else {
+                            timerHtml = `<div class="card" style="background:#F1F8E9; border-left: 5px solid var(--col-olive);">
+                        <div class="log-title" style="color:var(--col-olive)">Safe to give medicine</div>
+                        <div class="text-small">${last.data.frequencyHours}h passed since last dose</div>
+                    </div>`;
+                        }
+                    }
+                }
+
+                const commonMeds = ['Tylenol', 'Motrin', 'Albuterol', 'Zofran'];
+
+                container.innerHTML += `
             ${timerHtml}
             <h2>Quick Add Medicine</h2>
             <div class="quick-grid">
-                ${commonMeds.map(med => 
+                ${commonMeds.map(med =>
                     `<button class="medicine-btn" onclick="app.openMedForm('${med}')">
-                        <span style="font-size:1.5rem">💊</span>
                         <span>${med}</span>
                      </button>`
                 ).join('')}
                 <button class="medicine-btn" onclick="app.openMedForm('')">
-                    <span style="font-size:1.5rem">➕</span>
                     <span>Custom</span>
                 </button>
             </div>
@@ -493,28 +641,39 @@ const app = {
                 ${lastMeds.map(log => this.buildLogItem(log)).join('')}
             </div>
         `;
-    },
+            },
 
-    openMedForm(prefillName) {
-        const now = new Date();
-        // Format for datetime-local input: YYYY-MM-DDTHH:mm
-        const nowStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-        
-        const modal = document.getElementById('add-modal');
-        const body = document.getElementById('modal-body');
-        document.getElementById('modal-title').innerText = prefillName ? `Log ${prefillName}` : 'Log Medicine';
-        
-        body.innerHTML = `
+            openMedForm(prefillName) {
+                const now = new Date();
+                // Format for datetime-local input: YYYY-MM-DDTHH:mm
+                const nowStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+                const modal = document.getElementById('add-modal');
+                const body = document.getElementById('modal-body');
+                document.getElementById('modal-title').innerText = prefillName ? `Log ${prefillName}` : 'Log Medicine';
+
+                body.innerHTML = `
             <div class="input-group">
                 <label>Medicine Name</label>
-                <input type="text" id="med-name" value="${prefillName}" placeholder="e.g. Tylenol">
+                <input type="text" id="med-name" value="${prefillName}" placeholder="e.g. Tylenol" style="font-weight:700; font-size:1.1rem;">
             </div>
             <div class="input-group">
                 <label>Dosage (Optional)</label>
                 <input type="text" id="med-dose" placeholder="e.g. 5ml, 10mg">
             </div>
             <div class="input-group">
+                <label>Frequency (Hours) - Optional</label>
+                <input type="number" id="med-freq" placeholder="e.g. 4 or 6">
+                <div class="text-small" style="margin-top:4px; color:var(--col-text-muted);">Enter hours to set a next-dose timer.</div>
+            </div>
+            <div class="input-group">
                 <label>Time Given</label>
+                <div style="display:flex; gap:10px; margin-bottom:8px;">
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(0)">Now</button>
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(-15)">-15m</button>
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(-30)">-30m</button>
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(-60)">-1h</button>
+                </div>
                 <input type="datetime-local" id="med-time" value="${nowStr}">
             </div>
             <div class="modal-actions">
@@ -522,47 +681,50 @@ const app = {
                 <button class="btn" onclick="app.saveMedLog()">Save</button>
             </div>
         `;
-        modal.classList.add('open');
-    },
+                modal.classList.add('open');
+            },
 
-    saveMedLog() {
-        const name = document.getElementById('med-name').value;
-        if (!name) return alert('Name required');
-        
-        const dose = document.getElementById('med-dose').value;
-        const timeVal = document.getElementById('med-time').value;
-        const timeGiven = new Date(timeVal).getTime();
+            setTimeInput(minutesOffset) {
+                const now = new Date();
+                const newTime = new Date(now.getTime() + (minutesOffset * 60000));
+                const timeStr = new Date(newTime.getTime() - (newTime.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                const input = document.querySelector('input[type="datetime-local"]');
+                if (input) input.value = timeStr;
+            },
 
-        store.addLog({
-            type: 'MEDICINE',
-            childId: state.activeChildId,
-            timeGiven: timeGiven,
-            data: { medicineName: name, dosage: dose }
-        });
-        
-        this.closeModal();
-        this.navigate('meds'); // Refresh
-    },
+            saveMedLog() {
+                const name = document.getElementById('med-name').value;
+                if (!name) return alert('Name required');
 
-    // --- VIEW: SYMPTOMS ---
-    renderSymptomsView(container) {
-        // Daily Metrics Section
-        const today = new Date().toDateString();
-        // Check if metrics exist for today? (Simplified for now: Just allow adding new logs)
+                const dose = document.getElementById('med-dose').value;
+                const freq = document.getElementById('med-freq').value;
+                const timeVal = document.getElementById('med-time').value;
+                const timeGiven = new Date(timeVal).getTime();
 
-        const commonSym = ['Fever', 'Cough', 'Vomiting', 'Diarrhea', 'Rash'];
+                store.addLog({
+                    type: 'MEDICINE',
+                    childId: state.activeChildId,
+                    timeGiven: timeGiven,
+                    data: { medicineName: name, dosage: dose, frequencyHours: freq ? parseFloat(freq) : null }
+                });
 
-        container.innerHTML += `
+                this.closeModal();
+                this.navigate('meds'); // Refresh
+            },
+
+            renderSymptomsView(container) {
+                // Daily Metrics Section
+                const commonSym = ['Fever', 'Cough', 'Vomiting', 'Diarrhea', 'Rash'];
+
+                container.innerHTML += `
             <h2>Quick Add Symptom</h2>
             <div class="quick-grid">
-                ${commonSym.map(s => 
+                ${commonSym.map(s =>
                     `<button class="symptom-btn" onclick="app.openSymptomForm('${s}')">
-                        <span style="font-size:1.5rem">🤒</span>
                         <span>${s}</span>
                      </button>`
                 ).join('')}
                 <button class="symptom-btn" onclick="app.openSymptomForm('')">
-                    <span style="font-size:1.5rem">➕</span>
                     <span>Custom</span>
                 </button>
             </div>
@@ -589,26 +751,26 @@ const app = {
                 </div>
             </div>
         `;
-    },
+            },
 
-    openSymptomForm(prefillName) {
-        const now = new Date();
-        const nowStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-        
-        const modal = document.getElementById('add-modal');
-        const body = document.getElementById('modal-body');
-        document.getElementById('modal-title').innerText = 'Log Symptom';
-        
-        // Dynamic fields based on type
-        let extraFields = '';
-        if (prefillName === 'Fever') {
-            extraFields = `
+            openSymptomForm(prefillName) {
+                const now = new Date();
+                const nowStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+                const modal = document.getElementById('add-modal');
+                const body = document.getElementById('modal-body');
+                document.getElementById('modal-title').innerText = 'Log Symptom';
+
+                // Dynamic fields based on type
+                let extraFields = '';
+                if (prefillName === 'Fever') {
+                    extraFields = `
             <div class="input-group">
                 <label>Temperature (${store.data.settings.tempUnit || 'F'})</label>
                 <input type="number" step="0.1" id="sym-temp" placeholder="100.4">
             </div>`;
-        } else {
-             extraFields = `
+                } else {
+                    extraFields = `
             <div class="input-group">
                 <label>Severity</label>
                 <select id="sym-severity">
@@ -617,12 +779,12 @@ const app = {
                     <option value="Severe">Severe</option>
                 </select>
             </div>`;
-        }
+                }
 
-        body.innerHTML = `
+                body.innerHTML = `
             <div class="input-group">
                 <label>Symptom</label>
-                <input type="text" id="sym-name" value="${prefillName}">
+                <input type="text" id="sym-name" value="${prefillName}" style="font-weight:700;">
             </div>
             ${extraFields}
             <div class="input-group">
@@ -631,6 +793,11 @@ const app = {
             </div>
             <div class="input-group">
                 <label>Time</label>
+                <div style="display:flex; gap:10px; margin-bottom:8px;">
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(0)">Now</button>
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(-15)">-15m</button>
+                    <button class="btn btn-secondary btn-small" onclick="app.setTimeInput(-30)">-30m</button>
+                </div>
                 <input type="datetime-local" id="sym-time" value="${nowStr}">
             </div>
             <div class="modal-actions">
@@ -638,95 +805,93 @@ const app = {
                 <button class="btn" onclick="app.saveSymptomLog()">Save</button>
             </div>
         `;
-        modal.classList.add('open');
-    },
+                modal.classList.add('open');
+            },
 
-    saveSymptomLog() {
-        const name = document.getElementById('sym-name').value;
-        const timeVal = document.getElementById('sym-time').value;
-        const timeGiven = new Date(timeVal).getTime();
-        const notes = document.getElementById('sym-notes').value;
-        
-        let details = {};
-        if (document.getElementById('sym-temp')) details.temp = document.getElementById('sym-temp').value;
-        if (document.getElementById('sym-severity')) details.severity = document.getElementById('sym-severity').value;
+            saveSymptomLog() {
+                const name = document.getElementById('sym-name').value;
+                const timeVal = document.getElementById('sym-time').value;
+                const timeGiven = new Date(timeVal).getTime();
+                const notes = document.getElementById('sym-notes').value;
 
-        store.addLog({
-            type: 'SYMPTOM',
-            childId: state.activeChildId,
-            timeGiven: timeGiven,
-            data: { symptomName: name, notes, ...details }
-        });
-        
-        this.closeModal();
-        this.navigate('history'); // Go to history to see it
-    },
-    
-    saveMetric(type, value) {
-        if (!value) return;
-        store.addLog({
-            type: 'METRIC',
-            childId: state.activeChildId,
-            timeGiven: Date.now(),
-            data: { metricType: type, value }
-        });
-        alert('Saved');
-    },
+                let details = {};
+                if (document.getElementById('sym-temp')) details.temp = document.getElementById('sym-temp').value;
+                if (document.getElementById('sym-severity')) details.severity = document.getElementById('sym-severity').value;
 
-    // --- VIEW: HISTORY ---
-    renderHistoryView(container) {
-        const logs = store.getLogs().filter(l => l.childId === state.activeChildId);
-        
-        // Group by Date
-        const grouped = {};
-        logs.forEach(log => {
-            const dateStr = new Date(log.timeGiven).toDateString();
-            if (!grouped[dateStr]) grouped[dateStr] = [];
-            grouped[dateStr].push(log);
-        });
+                store.addLog({
+                    type: 'SYMPTOM',
+                    childId: state.activeChildId,
+                    timeGiven: timeGiven,
+                    data: { symptomName: name, notes, ...details }
+                });
 
-        let html = `<h2>History</h2>`;
-        if (logs.length === 0) html += `<div class="empty-state">No history yet.</div>`;
+                this.closeModal();
+                this.navigate('history'); // Go to history to see it
+            },
 
-        for (const [date, daysLogs] of Object.entries(grouped)) {
-            html += `<h3 style="margin-top:20px; font-size:1rem; color:var(--col-text-muted)">${date}</h3>`;
-            html += daysLogs.map(log => this.buildLogItem(log)).join('');
-        }
-        
-        container.innerHTML += html;
-    },
+            saveMetric(type, value) {
+                if (!value) return;
+                store.addLog({
+                    type: 'METRIC',
+                    childId: state.activeChildId,
+                    timeGiven: Date.now(),
+                    data: { metricType: type, value }
+                });
+                alert('Saved');
+            },
 
-    buildLogItem(log) {
-        const date = new Date(log.timeGiven);
-        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        let icon = '';
-        let title = '';
-        let subtitle = '';
+            // --- VIEW: HISTORY ---
+            renderHistoryView(container) {
+                const logs = store.getLogs().filter(l => l.childId === state.activeChildId);
 
-        if (log.type === 'MEDICINE') {
-            icon = '💊';
-            title = log.data.medicineName;
-            subtitle = log.data.dosage ? `Dose: ${log.data.dosage}` : '';
-        } else if (log.type === 'SYMPTOM') {
-            icon = '🤒';
-            title = log.data.symptomName;
-            let parts = [];
-            if (log.data.temp) parts.push(`${log.data.temp}°`);
-            if (log.data.severity) parts.push(log.data.severity);
-            if (log.data.notes) parts.push(log.data.notes);
-            subtitle = parts.join(' • ');
-        } else {
-            icon = '📊';
-            title = log.data.metricType;
-            subtitle = log.data.value;
-        }
+                // Group by Date
+                const grouped = {};
+                logs.forEach(log => {
+                    const dateStr = new Date(log.timeGiven).toDateString();
+                    if (!grouped[dateStr]) grouped[dateStr] = [];
+                    grouped[dateStr].push(log);
+                });
 
-        return `
+                let html = `<h2>History</h2>`;
+                if (logs.length === 0) html += `<div class="empty-state">No history yet.</div>`;
+
+                for (const [date, daysLogs] of Object.entries(grouped)) {
+                    html += `<h3 style="margin-top:20px; font-size:1rem; color:var(--col-text-muted)">${date}</h3>`;
+                    html += daysLogs.map(log => this.buildLogItem(log)).join('');
+                }
+
+                container.innerHTML += html;
+            },
+
+            buildLogItem(log) {
+                const date = new Date(log.timeGiven);
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                let title = '';
+                let subtitle = '';
+
+                if (log.type === 'MEDICINE') {
+                    // Emphasize Medicine Name
+                    title = `<span style="font-size:1.1rem; font-weight:800; color:var(--col-teal-dark)">${log.data.medicineName}</span>`;
+                    subtitle = log.data.dosage ? `Dose: ${log.data.dosage}` : '';
+                    if (log.data.frequencyHours) subtitle += ` • Every ${log.data.frequencyHours}h`;
+                } else if (log.type === 'SYMPTOM') {
+                    title = log.data.symptomName;
+                    let parts = [];
+                    if (log.data.temp) parts.push(`${log.data.temp}°`);
+                    if (log.data.severity) parts.push(log.data.severity);
+                    if (log.data.notes) parts.push(log.data.notes);
+                    subtitle = parts.join(' • ');
+                } else {
+                    title = log.data.metricType;
+                    subtitle = log.data.value;
+                }
+
+                return `
             <div class="log-item">
                 <div class="log-time">${timeStr}</div>
                 <div class="log-details">
-                    <div class="log-title">${icon} ${title}</div>
+                    <div class="log-title">${title}</div>
                     ${subtitle ? `<div class="log-subtitle">${subtitle}</div>` : ''}
                 </div>
                 <div class="log-actions">
@@ -734,21 +899,21 @@ const app = {
                 </div>
             </div>
         `;
-    },
-    
-    deleteLog(id) {
-        if(confirm('Delete this entry?')) {
-            store.deleteLog(id);
-            this.navigate(state.currentView);
-        }
-    },
+            },
 
-    // --- VIEW: REPORTS ---
-    renderReportsView(container) {
-        container.innerHTML += `
-            <h2>Doctor's Report</h2>
+            deleteLog(id) {
+                if (confirm('Delete this entry?')) {
+                    store.deleteLog(id);
+                    this.navigate(state.currentView);
+                }
+            },
+
+            // --- VIEW: REPORTS ---
+            renderReportsView(container) {
+                container.innerHTML += `
+            <h2>Summary Report</h2>
             <div class="card">
-                <p class="text-small">Generate a summary for: <strong>${store.data.children.find(c=>c.id === state.activeChildId)?.name}</strong></p>
+                <p class="text-small">Generate a summary for: <strong>${store.data.children.find(c => c.id === state.activeChildId)?.name}</strong></p>
                 <div class="input-group">
                      <label>Format</label>
                      <select id="report-format">
@@ -762,73 +927,74 @@ const app = {
             </div>
             <div id="report-output" style="white-space: pre-wrap; font-family: monospace; background: #eee; padding: 10px; border-radius: 8px; font-size: 0.8rem; display:none;"></div>
         `;
-    },
+            },
 
-    generateReport() {
-        const format = document.getElementById('report-format').value;
-        const childName = store.data.children.find(c => c.id === state.activeChildId)?.name;
-        let logs = store.getLogs().filter(l => l.childId === state.activeChildId);
-        
-        // Filter based on format
-        if (format === 'meds') logs = logs.filter(l => l.type === 'MEDICINE');
-        if (format === 'symptoms') logs = logs.filter(l => l.type === 'SYMPTOM');
+            generateReport() {
+                const format = document.getElementById('report-format').value;
+                const childName = store.data.children.find(c => c.id === state.activeChildId)?.name;
+                let logs = store.getLogs().filter(l => l.childId === state.activeChildId);
 
-        let text = `Report for ${childName}\nGenerated: ${new Date().toLocaleString()}\n--------------------------------\n`;
-        
-        // Group by day for readability
-        let currentDay = '';
-        logs.reverse(); // Chronological order for report often better? No, logs are desc. Let's make them asc for reading.
-        [...logs].sort((a,b) => a.timeGiven - b.timeGiven).forEach(log => {
-             const day = new Date(log.timeGiven).toDateString();
-             if (day !== currentDay) {
-                 text += `\n[ ${day} ]\n`;
-                 currentDay = day;
-             }
-             const time = new Date(log.timeGiven).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-             
-             if (log.type === 'MEDICINE') {
-                 text += `${time} - MED: ${log.data.medicineName} (${log.data.dosage || 'No dose'})\n`;
-             } else if (log.type === 'SYMPTOM') {
-                 let det = [];
-                 if (log.data.temp) det.push(`Temp: ${log.data.temp}`);
-                 if (log.data.severity) det.push(log.data.severity);
-                 text += `${time} - SYM: ${log.data.symptomName} ${det.length ? '('+det.join(', ')+')' : ''}\n`;
-                 if (log.data.notes) text += `        Note: ${log.data.notes}\n`;
-             } else {
-                 text += `${time} - LOG: ${log.data.metricType} = ${log.data.value}\n`;
-             }
-        });
+                // Filter based on format
+                if (format === 'meds') logs = logs.filter(l => l.type === 'MEDICINE');
+                if (format === 'symptoms') logs = logs.filter(l => l.type === 'SYMPTOM');
 
-        const out = document.getElementById('report-output');
-        out.style.display = 'block';
-        out.innerText = text;
-        
-        navigator.clipboard.writeText(text).then(() => alert('Report copied to clipboard!'));
-    },
-    
-    showSettings() {
-        if(confirm('Reset all data? This cannot be undone.')) {
-            localStorage.removeItem(DB_KEY);
-            location.reload();
+                let text = `Report for ${childName}\nGenerated: ${new Date().toLocaleString()}\n--------------------------------\n`;
+
+                // Group by day for readability
+                let currentDay = '';
+                logs.reverse(); // Chronological order for report often better? No, logs are desc. Let's make them asc for reading.
+                [...logs].sort((a, b) => a.timeGiven - b.timeGiven).forEach(log => {
+                    const day = new Date(log.timeGiven).toDateString();
+                    if (day !== currentDay) {
+                        text += `\n[ ${day} ]\n`;
+                        currentDay = day;
+                    }
+                    const time = new Date(log.timeGiven).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    if (log.type === 'MEDICINE') {
+                        text += `${time} - MED: ${log.data.medicineName} (${log.data.dosage || 'No dose'})\n`;
+                    } else if (log.type === 'SYMPTOM') {
+                        let det = [];
+                        if (log.data.temp) det.push(`Temp: ${log.data.temp}`);
+                        if (log.data.severity) det.push(log.data.severity);
+                        text += `${time} - SYM: ${log.data.symptomName} ${det.length ? '(' + det.join(', ') + ')' : ''}\n`;
+                        if (log.data.notes) text += `        Note: ${log.data.notes}\n`;
+                    } else {
+                        text += `${time} - LOG: ${log.data.metricType} = ${log.data.value}\n`;
+                    }
+                });
+
+                const out = document.getElementById('report-output');
+                out.style.display = 'block';
+                out.innerText = text;
+
+                navigator.clipboard.writeText(text).then(() => alert('Report copied to clipboard!'));
+            },
+
+            showSettings() {
+                if (confirm('Reset all data? This cannot be undone.')) {
+                    localStorage.removeItem(DB_KEY);
+                    location.reload();
+                }
+            },
+
+            closeModal() {
+                document.getElementById('add-modal').classList.remove('open');
+            }
+        };
+
+        // Utils
+        window.onclick = function (event) {
+            const modal = document.getElementById('add-modal');
+            if (event.target == modal) {
+                app.closeModal();
+            }
         }
-    },
 
-    closeModal() {
-        document.getElementById('add-modal').classList.remove('open');
-    }
-};
+        // Init
+        app.init();
 
-// Utils
-window.onclick = function(event) {
-    const modal = document.getElementById('add-modal');
-    if (event.target == modal) {
-        app.closeModal();
-    }
-}
-
-// Init
-app.init();
-
-</script>
+    </script>
 </body>
+
 </html>
