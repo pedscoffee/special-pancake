@@ -493,6 +493,14 @@
                 this.save();
             }
 
+            updateChild(id, updates) {
+                const idx = this.data.children.findIndex(c => c.id === id);
+                if (idx !== -1) {
+                    this.data.children[idx] = { ...this.data.children[idx], ...updates };
+                    this.save();
+                }
+            }
+
             addLog(entry) {
                 this.data.logs.push({ ...entry, id: crypto.randomUUID(), timestamp: Date.now() });
                 this.save();
@@ -570,8 +578,17 @@
             },
 
             switchChild(id) {
-                state.activeChildId = id;
-                this.navigate(state.currentView);
+                if (state.activeChildId === id) {
+                    const child = store.data.children.find(c => c.id === id);
+                    const newName = prompt('Rename child:', child.name);
+                    if (newName && newName !== child.name) {
+                        store.updateChild(id, { name: newName });
+                        this.navigate(state.currentView);
+                    }
+                } else {
+                    state.activeChildId = id;
+                    this.navigate(state.currentView);
+                }
             },
 
             renderChildSelector() {
@@ -619,7 +636,7 @@
                     }
                 }
 
-                const commonMeds = ['Tylenol', 'Motrin', 'Albuterol', 'Zofran'];
+                const commonMeds = ['Tylenol', 'Motrin', 'Albuterol', 'Zofran', 'Pedialyte', 'Simethicone', 'Zyrtec'];
 
                 container.innerHTML += `
             ${timerHtml}
@@ -737,6 +754,16 @@
                         <option value="">-- Select --</option>
                         <option value="Normal">Normal</option>
                         <option value="Less">Less than normal</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Drinking Fluids</label>
+                    <select id="metric-fluids" onchange="app.saveMetric('fluids', this.value)">
+                        <option value="">-- Select --</option>
+                        <option value="Normal">Normal</option>
+                        <option value="Less">Less than normal</option>
+                        <option value="Little">Only a little</option>
                         <option value="None">None</option>
                     </select>
                 </div>
@@ -925,6 +952,16 @@
                 <!-- Time range could be added here -->
                 <button class="btn" onclick="app.generateReport()">Generate & Copy</button>
             </div>
+            
+            <h3>Data Management</h3>
+            <div class="card">
+                <button class="btn btn-outline" style="margin-bottom:10px;" onclick="app.exportData()">Export Data (JSON)</button>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Import Data</button>
+                    <input type="file" id="import-file" style="display:none" onchange="app.importData(this)">
+                </div>
+                <p class="text-small" style="margin-top:10px;">Importing will overwrite current data.</p>
+            </div>
             <div id="report-output" style="white-space: pre-wrap; font-family: monospace; background: #eee; padding: 10px; border-radius: 8px; font-size: 0.8rem; display:none;"></div>
         `;
             },
@@ -980,6 +1017,35 @@
 
             closeModal() {
                 document.getElementById('add-modal').classList.remove('open');
+            },
+
+            exportData() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(store.data));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "kiddymeds_backup_" + new Date().toISOString().slice(0, 10) + ".json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            },
+
+            importData(input) {
+                const file = input.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        if (confirm('Replace current data with imported backup?')) {
+                            localStorage.setItem(DB_KEY, JSON.stringify(json));
+                            location.reload();
+                        }
+                    } catch (err) {
+                        alert('Invalid JSON file');
+                    }
+                };
+                reader.readAsText(file);
             }
         };
 
