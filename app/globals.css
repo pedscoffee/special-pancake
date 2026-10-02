@@ -1342,6 +1342,122 @@ svg {
   margin-top: 28px;
   align-items: start;
 }
+.sharing-toolbar {
+  margin-bottom: 0;
+}
+.receive-action {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+.share-preview {
+  background: #f4f7f4;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.share-preview summary {
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink);
+}
+.share-preview pre {
+  margin-top: 12px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #496550;
+  max-height: 180px;
+  overflow: auto;
+}
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.share-actions > * {
+  flex: 1 1 140px;
+}
+.share-checkbox,
+.conflict-option {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.7;
+}
+.share-checkbox input,
+.conflict-option input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--sage);
+}
+.receive-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.receive-counts > span {
+  background: #f4f7f4;
+  border-radius: 10px;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #496550;
+}
+.receive-counts strong {
+  display: block;
+  color: var(--ink);
+  font-size: 20px;
+}
+.receive-details summary {
+  color: var(--sage-dark);
+  cursor: pointer;
+  font-size: 13px;
+}
+.receive-details ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  max-height: 240px;
+  overflow: auto;
+}
+.receive-details li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.receive-details li span,
+.conflict-option > span > span {
+  display: block;
+  color: #496550;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.care-conflict {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  min-width: 0;
+}
+.care-conflict legend {
+  font-size: 12px;
+  padding: 0 5px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.conflict-option + .conflict-option {
+  margin-top: 12px;
+}
+.conflict-option > span {
+  min-width: 0;
+}
 .report-title {
   margin: 20px 0 15px;
   font-size: 20px;

@@ -34,6 +34,7 @@ npm start
 - **Symptoms and daily care:** 17 common symptom shortcuts with distinct icons, search, category filters, and custom observations; temperatures, severity, notes, appetite, fluids, urine observations with optional wet-diaper counts, and stool check-ins with bowel-movement counts, optional stool-diaper counts, and descriptions.
 - **Care history:** text search, inclusive date filters, record-type filters, editing, deletion with immediate undo, and CSV export.
 - **Reports:** an on-screen preview, date/type filters, clipboard copy, text download, and printing or saving as PDF through the browser.
+- **Share care:** a personal message, readable snapshot, and importable care file for the selected child and report filters. Receive care reviews new entries, skips duplicates, and lets you choose between differing versions without replacing family data.
 - **Safe backups:** export all family records; validate v1 or v2 JSON before reviewing and confirming a restore. Unreadable stored records remain untouched.
 - **Private demo:** example records you can explore and change without saving over real family data. Reloading exits the demo.
 - **Offline PWA:** installable icons and manifest, with all production routes and assets cached after the first successful visit.
@@ -48,6 +49,14 @@ Temperature entries store their original unit. Switching °F/°C converts their 
 Bathroom check-ins have separate **Urine** and **Stool** entries. Diaper counts stay with each observation; a mixed diaper can be included in both counts, and those counts are never combined into a total. Choose the period covered: today so far, since the previous check-in of the same kind, or another period described in notes. Repeated daily snapshots aren't summed. Blank diaper counts mean not recorded; zero is an explicit observation. Stool descriptions are optional, original plain-language choices, not a reproduction of a clinical stool chart. Existing bathroom records retain their original values and appear as previous check-ins, without inventing diaper counts or observation periods.
 
 Invalid records are never silently replaced. A recovery message directs you to Settings, where you can download the original raw storage or restore a valid backup.
+
+## Sharing with another caregiver
+
+In **Reports**, select a child, dates, and record category, then choose **Share care**. Preview the message and add a personal note. Supported devices can open their share sheet with the message and a readable `.txt` care file. Otherwise, copy the message or open an email draft, download the care file, and attach it yourself. Email drafts contain the message only.
+
+The message shows up to six recent entries; the file contains every selected record and the information needed to import them. The recipient opens **Reports → Receive care**, selects the file, and chooses an existing child profile or adds a new one. The review shows new records, duplicates, and differing versions. Existing family records, preferences, and medicine shortcuts remain in place; differing records change only when the recipient chooses the shared version.
+
+This is a manual handoff, with no accounts, database, or automatic synchronization. Send a new snapshot to pass along later changes. Deletions are not propagated. Only the selected child's records and profile name/color are shared, with no birthday, other children, or personal preferences. Care files are readable text and are not encrypted; share them through a channel you trust.
 
 ## Privacy and boundaries
 
@@ -74,7 +83,7 @@ npx playwright install chromium
 PLAYWRIGHT_CHANNEL=chromium npm run test:e2e
 ```
 
-Tests cover desktop and mobile layouts, logging, editing, undo, separate child histories, temperature conversion, report export, demo isolation, backup validation/restoration, legacy migration, corrupt storage, keyboard dialogs, WCAG AA checks, and offline reload/navigation/logging. Tests use isolated browser contexts and synthetic records.
+Tests cover desktop and mobile layouts, logging, editing, undo, separate child histories, temperature conversion, report export, sharing fallbacks, care-file validation and merge review, demo isolation, backup validation/restoration, legacy migration, corrupt storage, keyboard dialogs, WCAG AA checks, and offline reload/navigation/logging. Tests use isolated browser contexts and synthetic records; native sharing is mocked and no messages are sent.
 
 ## Deployment and architecture
 

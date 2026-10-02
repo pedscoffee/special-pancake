@@ -15,6 +15,7 @@ import {
   Search,
   ShieldCheck,
   CirclePlay,
+  Share2,
   Upload,
   X,
 } from "lucide-react";
@@ -34,6 +35,9 @@ import { downloadFile } from "@/lib/download";
 import { useCare } from "./care-provider";
 import { EmptyState, EntryList, IconBox, Modal, SectionHeading } from "./ui";
 import type { EntryAction } from "./care-app";
+import { ShareCare } from "./share-care";
+import { ReceiveCare } from "./receive-care";
+import { SHARE_MARKER } from "@/lib/sharing";
 
 const FILTERS = [
   { value: "all", label: "Everything" },
@@ -271,6 +275,7 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
   const [to, setTo] = useState(() => localDate(now));
   const [type, setType] = useState("all");
   const [copyFallback, setCopyFallback] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const filtered = filterLogs(logs, { type, from, to });
   const report = makeReport(child.name, filtered, db!.settings, from, to);
@@ -285,171 +290,202 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
     }
   }
   return (
-    <div className="reports-grid">
-      <div className="report-controls">
-        <section className="card">
-          <IconBox icon={FileText} />
-          <h2 className="report-title">Ready for their next visit.</h2>
-          <p className="section-description">
-            Turn the little moments into a clear summary for your healthcare
-            provider.
-          </p>
-          <div className="form-stack">
-            <div className="form-grid">
-              <label>
-                From
-                <input
-                  type="date"
-                  value={from}
-                  max={to || undefined}
-                  onChange={(e) => setFrom(e.target.value)}
-                />
-              </label>
-              <label>
-                To
-                <input
-                  type="date"
-                  value={to}
-                  min={from || undefined}
-                  onChange={(e) => setTo(e.target.value)}
-                />
-              </label>
-            </div>
-            <div className="time-shortcuts">
-              <button
-                onClick={() => {
-                  setFrom(localDate(now));
-                  setTo(localDate(now));
-                }}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => {
-                  setFrom(localDate(now - 6 * 86400000));
-                  setTo(localDate(now));
-                }}
-              >
-                Last 7 days
-              </button>
-              <button
-                onClick={() => {
-                  setFrom("");
-                  setTo("");
-                }}
-              >
-                All time
-              </button>
-            </div>
-            <label>
-              Include
-              <select value={type} onChange={(e) => setType(e.target.value)}>
-                {FILTERS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {!rangeValid && (
-              <p role="alert" className="form-error">
-                The end date must be on or after the start date.
-              </p>
-            )}
-            <button
-              className="button primary"
-              onClick={copy}
-              disabled={!rangeValid}
-            >
-              <Copy size={16} />
-              Copy report
-            </button>
-            <div className="button-group">
-              <button
-                className="button secondary"
-                disabled={!rangeValid}
-                onClick={() => {
-                  downloadFile(
-                    report,
-                    `kiddymeds-${child.name.replace(/[^a-zA-Z0-9]/g, "-")}-${localDate(now)}.txt`,
-                  );
-                  notify("Report downloaded.");
-                }}
-              >
-                <ArrowDownToLine size={16} />
-                Download
-              </button>
-              <button
-                className="button secondary"
-                disabled={!rangeValid}
-                onClick={() => window.print()}
-              >
-                <Printer size={16} />
-                Print / PDF
-              </button>
-            </div>
-          </div>
-        </section>
-        <div className="report-tip">
-          <ShieldCheck size={19} />
+    <>
+      <div className="view-toolbar sharing-toolbar">
+        <div>
+          <h2>A little care, passed along.</h2>
           <p>
-            Nothing is sent automatically. You decide when and how to share your
-            child’s care records.
+            Share a snapshot with another caregiver, or add records they’ve
+            sent.
           </p>
+        </div>
+        <div className="receive-action">
+          <ReceiveCare />
         </div>
       </div>
-      <section className="card report-preview">
-        <div className="report-preview-top">
-          <span className="eyebrow">REPORT PREVIEW</span>
-          <span className="pill-label">{filtered.length} entries</span>
-        </div>
-        <div className="print-report">
-          <div className="print-brand">
-            <Heart size={18} />
-            KiddyMeds
+      <div className="reports-grid">
+        <div className="report-controls">
+          <section className="card">
+            <IconBox icon={FileText} />
+            <h2 className="report-title">A clear handoff, ready to share.</h2>
+            <p className="section-description">
+              Choose the records to share with family, a caregiver, or your
+              healthcare provider.
+            </p>
+            <div className="form-stack">
+              <div className="form-grid">
+                <label>
+                  From
+                  <input
+                    type="date"
+                    value={from}
+                    max={to || undefined}
+                    onChange={(e) => setFrom(e.target.value)}
+                  />
+                </label>
+                <label>
+                  To
+                  <input
+                    type="date"
+                    value={to}
+                    min={from || undefined}
+                    onChange={(e) => setTo(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="time-shortcuts">
+                <button
+                  onClick={() => {
+                    setFrom(localDate(now));
+                    setTo(localDate(now));
+                  }}
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => {
+                    setFrom(localDate(now - 6 * 86400000));
+                    setTo(localDate(now));
+                  }}
+                >
+                  Last 7 days
+                </button>
+                <button
+                  onClick={() => {
+                    setFrom("");
+                    setTo("");
+                  }}
+                >
+                  All time
+                </button>
+              </div>
+              <label>
+                Include
+                <select value={type} onChange={(e) => setType(e.target.value)}>
+                  {FILTERS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {!rangeValid && (
+                <p role="alert" className="form-error">
+                  The end date must be on or after the start date.
+                </p>
+              )}
+              <button
+                className="button primary"
+                disabled={!rangeValid || !filtered.length}
+                onClick={() => setShareOpen(true)}
+              >
+                <Share2 size={16} />
+                Share care
+              </button>
+              <button
+                className="button secondary"
+                onClick={copy}
+                disabled={!rangeValid}
+              >
+                <Copy size={16} />
+                Copy report
+              </button>
+              <div className="button-group">
+                <button
+                  className="button secondary"
+                  disabled={!rangeValid}
+                  onClick={() => {
+                    downloadFile(
+                      report,
+                      `kiddymeds-${child.name.replace(/[^a-zA-Z0-9]/g, "-")}-${localDate(now)}.txt`,
+                    );
+                    notify("Report downloaded.");
+                  }}
+                >
+                  <ArrowDownToLine size={16} />
+                  Download
+                </button>
+                <button
+                  className="button secondary"
+                  disabled={!rangeValid}
+                  onClick={() => window.print()}
+                >
+                  <Printer size={16} />
+                  Print / PDF
+                </button>
+              </div>
+            </div>
+          </section>
+          <div className="report-tip">
+            <ShieldCheck size={19} />
+            <p>
+              Nothing is sent automatically. You decide when and how to share
+              your child’s care records.
+            </p>
           </div>
-          <h2>{child.name}’s care report</h2>
-          <p className="report-period">
-            {from || "Beginning"} — {to || "Today"}
-          </p>
-          <div className="report-totals">
-            <span>
-              <strong>
-                {filtered.filter((l) => l.type === "MEDICINE").length}
-              </strong>{" "}
-              medicine entries
-            </span>
-            <span>
-              <strong>
-                {filtered.filter((l) => l.type === "SYMPTOM").length}
-              </strong>{" "}
-              symptoms
-            </span>
-            <span>
-              <strong>
-                {filtered.filter((l) => l.type === "METRIC").length}
-              </strong>{" "}
-              check-ins
-            </span>
-          </div>
-          {copyFallback ? (
-            <textarea
-              className="report-text"
-              readOnly
-              value={report}
-              ref={textRef}
-              onFocus={(e) => e.currentTarget.select()}
-              aria-label="Report text to copy"
-              autoFocus
-            />
-          ) : (
-            <pre className="report-text">
-              {report.split("\n").slice(4).join("\n")}
-            </pre>
-          )}
         </div>
-      </section>
-    </div>
+        <section className="card report-preview">
+          <div className="report-preview-top">
+            <span className="eyebrow">REPORT PREVIEW</span>
+            <span className="pill-label">{filtered.length} entries</span>
+          </div>
+          <div className="print-report">
+            <div className="print-brand">
+              <Heart size={18} />
+              KiddyMeds
+            </div>
+            <h2>{child.name}’s care report</h2>
+            <p className="report-period">
+              {from || "Beginning"} — {to || "Today"}
+            </p>
+            <div className="report-totals">
+              <span>
+                <strong>
+                  {filtered.filter((l) => l.type === "MEDICINE").length}
+                </strong>{" "}
+                medicine entries
+              </span>
+              <span>
+                <strong>
+                  {filtered.filter((l) => l.type === "SYMPTOM").length}
+                </strong>{" "}
+                symptoms
+              </span>
+              <span>
+                <strong>
+                  {filtered.filter((l) => l.type === "METRIC").length}
+                </strong>{" "}
+                check-ins
+              </span>
+            </div>
+            {copyFallback ? (
+              <textarea
+                className="report-text"
+                readOnly
+                value={report}
+                ref={textRef}
+                onFocus={(e) => e.currentTarget.select()}
+                aria-label="Report text to copy"
+                autoFocus
+              />
+            ) : (
+              <pre className="report-text">
+                {report.split("\n").slice(4).join("\n")}
+              </pre>
+            )}
+          </div>
+        </section>
+      </div>
+      {shareOpen && (
+        <ShareCare
+          childId={child.id}
+          from={from}
+          to={to}
+          type={type}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -497,7 +533,15 @@ export function SettingsView({
     }
     setReading(true);
     try {
-      setPending(parseDatabase(JSON.parse(await file.text())));
+      const text = await file.text();
+      if (
+        text.includes(SHARE_MARKER) ||
+        text.includes('"kind":"kiddymeds-care-share"')
+      )
+        throw new Error(
+          "This is a shared care file. Use Receive care to add it without replacing your records.",
+        );
+      setPending(parseDatabase(JSON.parse(text)));
     } catch (err) {
       setImportError(
         err instanceof Error && err.message !== "Unexpected end of JSON input"

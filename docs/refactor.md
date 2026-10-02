@@ -38,6 +38,8 @@ The system font stack preserves the requested familiar, Apple-like feel and avoi
 - Bathroom check-ins separate urine and stool, with explicit observation periods, optional wet/stool diaper counts, bowel-movement counts, and original plain-language stool descriptions. Mixed diapers may appear in both observations; counts and repeated daily snapshots are never summed. Historical bathroom values remain unchanged.
 - Combined history search/type/date filters, pagination, and CSV export.
 - Reports preview the exact included records and support text download, clipboard fallback, and print/PDF.
+- Share care packages a filtered child snapshot into a readable message and an importable text file. The [Web Share API](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share) opens device sharing options from a user click, with file support checked using [canShare](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/canShare). Copy, email drafts, and manual download provide fallbacks; email drafts do not attach files. No action reports a message as delivered.
+- Receive care validates the file, requires an explicit destination profile, skips duplicate record IDs with identical content, and reviews differing versions. A changed local record invalidates its earlier conflict choice. Merges preserve unrelated records and personal preferences, and commit only after a successful storage write. This is manual snapshot exchange, not live synchronization; deletions are not transferred.
 - A transient demo keeps sample records separate from family records.
 - Native dialogs replace prompts and alerts; destructive operations show a concrete review before execution.
 

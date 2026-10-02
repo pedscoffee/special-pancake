@@ -25,7 +25,7 @@ type CareContext = {
   demo: boolean;
   problem: string;
   toast: string;
-  update: (fn: (db: Database) => Database, message?: string) => boolean;
+  update: (fn: (db: Database) => Database | null, message?: string) => boolean;
   restore: (db: Database) => boolean;
   notify: (text: string) => void;
   startDemo: () => void;
@@ -148,8 +148,12 @@ export function CareProvider({ children }: { children: ReactNode }) {
     if (message) notify(message);
     return true;
   }
-  function update(fn: (database: Database) => Database, message?: string) {
-    return current.current ? commit(fn(current.current), message) : false;
+  function update(
+    fn: (database: Database) => Database | null,
+    message?: string,
+  ) {
+    const next = current.current ? fn(current.current) : null;
+    return next ? commit(next, message) : false;
   }
   function restore(next: Database) {
     return commit(next, "Backup restored. You’re all set.", true);
