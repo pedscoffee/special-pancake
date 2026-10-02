@@ -34,13 +34,15 @@ The system font stack preserves the requested familiar, Apple-like feel and avoi
 - One clock per medicine, based on its latest recorded entry; clocks refresh while the app is open and on window focus.
 - Source units stored with temperature readings, with display conversion when preferences change.
 - Editable, backdated entries with consistent notes across all record types.
-- Bathroom counts are actual numeric observations rather than an unimplemented placeholder.
+- Bathroom check-ins separate urine and stool, with explicit observation periods, optional wet/stool diaper counts, bowel-movement counts, and original plain-language stool descriptions. Mixed diapers may appear in both observations; counts and repeated daily snapshots are never summed. Historical bathroom values remain unchanged.
 - Combined history search/type/date filters, pagination, and CSV export.
 - Reports preview the exact included records and support text download, clipboard fallback, and print/PDF.
 - A transient demo keeps sample records separate from family records.
 - Native dialogs replace prompts and alerts; destructive operations show a concrete review before execution.
 
 ## Deliberate limits
+
+The stool vocabulary uses original everyday descriptions of texture. The general distinctions between hard/lumpy and loose/watery observations are consistent with [NIDDK's child constipation information](https://www.niddk.nih.gov/health-information/digestive-diseases/constipation-children/symptoms-causes) and [child diarrhea information](https://www.niddk.nih.gov/health-information/digestive-diseases/chronic-diarrhea-children/symptoms-causes). The app does not copy a numbered stool chart or classify an observation as healthy or unhealthy.
 
 The app never calculates a dose, supplies a dosing schedule, diagnoses symptoms, or interprets an elapsed interval as proof that another dose is safe. No medical thresholds or recommendations were added. App clocks are reference information, not background notifications.
 

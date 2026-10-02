@@ -19,7 +19,7 @@ import {
   Plus,
   Settings2,
   ShieldCheck,
-  Sparkles,
+  CirclePlay,
   Thermometer,
   Utensils,
   Droplets,
@@ -271,7 +271,7 @@ export function CareApp({ view }: { view: View }) {
             onClick={demo ? care.endDemo : care.startDemo}
           >
             {demo ? "Leave demo" : "Take a peek at the demo"}
-            <Sparkles size={13} />
+            <CirclePlay size={13} />
           </button>
           <span className="sidebar-version">
             A little care, all in one place.
@@ -322,7 +322,7 @@ export function CareApp({ view }: { view: View }) {
         <main id="main-content" className="main-content" tabIndex={-1}>
           {demo && (
             <div className="demo-banner">
-              <Sparkles size={17} />
+              <CirclePlay size={17} />
               <span>
                 You’re exploring a demo. These sample records are separate from
                 your family’s data.
@@ -1094,7 +1094,7 @@ export function DailyChecks({
         const last = today.find(
           (l) => l.type === "METRIC" && l.data.metricType === m.key,
         );
-        const Icon = [Utensils, Droplets, Bath][i];
+        const Icon = [Utensils, Droplets, Droplets, Bath][i];
         return (
           <button
             className="daily-check"

@@ -31,7 +31,7 @@ npm start
 - **Family overview:** quick logging, a daily summary, recent care, and individual medicine clocks.
 - **Child profiles:** independent records, profile colors, optional birthdays, and an explicit edit flow.
 - **Medicine records:** common and custom shortcuts, free-text dosage, an optional instructed interval, backdated entries, and notes. The last recorded dose appears when logging the same medicine.
-- **Symptoms and daily care:** temperatures, symptom severity, notes, appetite, fluids, and bathroom counts.
+- **Symptoms and daily care:** temperatures, symptom severity, notes, appetite, fluids, urine observations with optional wet-diaper counts, and stool check-ins with bowel-movement counts, optional stool-diaper counts, and descriptions.
 - **Care history:** text search, inclusive date filters, record-type filters, editing, deletion with immediate undo, and CSV export.
 - **Reports:** an on-screen preview, date/type filters, clipboard copy, text download, and printing or saving as PDF through the browser.
 - **Safe backups:** export all family records; validate v1 or v2 JSON before reviewing and confirming a restore. Unreadable stored records remain untouched.
@@ -44,6 +44,8 @@ npm start
 When served at the **same origin and in the same browser** as the original app, KiddyMeds automatically migrates `kiddymeds_db_v1` to `kiddymeds_db_v2`. The original key is retained as a recovery copy. If you change hostnames, ports, or browsers, export a backup from the old app and restore it in **Settings**.
 
 Temperature entries store their original unit. Switching °F/°C converts their display without changing the original measurement. Legacy temperatures inherit the old backup's temperature preference because the original app did not save units per entry.
+
+Bathroom check-ins have separate **Urine** and **Stool** entries. Diaper counts stay with each observation; a mixed diaper can be included in both counts, and those counts are never combined into a total. Choose the period covered: today so far, since the previous check-in of the same kind, or another period described in notes. Repeated daily snapshots aren't summed. Blank diaper counts mean not recorded; zero is an explicit observation. Stool descriptions are optional, original plain-language choices, not a reproduction of a clinical stool chart. Existing bathroom records retain their original values and appear as previous check-ins, without inventing diaper counts or observation periods.
 
 Invalid records are never silently replaced. A recovery message directs you to Settings, where you can download the original raw storage or restore a valid backup.
 

@@ -14,7 +14,7 @@ import {
   Printer,
   Search,
   ShieldCheck,
-  Sparkles,
+  CirclePlay,
   Upload,
   X,
 } from "lucide-react";
@@ -729,7 +729,7 @@ export function SettingsView({
             </p>
           </section>
           <section className="card demo-card">
-            <Sparkles size={22} />
+            <CirclePlay size={22} />
             <h3>A little look around?</h3>
             <p>Explore example care records without changing your own.</p>
             <button

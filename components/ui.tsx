@@ -131,7 +131,8 @@ export function EntryList({
                 : Activity
               : log.data.metricType === "appetite"
                 ? Utensils
-                : log.data.metricType === "fluids"
+                : log.data.metricType === "fluids" ||
+                    log.data.metricType === "urine"
                   ? Droplets
                   : Bath;
         const color =

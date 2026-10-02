@@ -20,6 +20,27 @@ export const SYMPTOMS = [
   "Rash",
   "Other symptom",
 ];
+export const URINE_OPTIONS = [
+  "More than usual",
+  "Usual amount",
+  "Less than usual",
+  "Much less, but still peeing",
+  "No urine",
+];
+// Original, plain-language observations; not a numbered clinical stool scale.
+export const STOOL_OPTIONS = [
+  "Hard pellets",
+  "Firm or lumpy",
+  "Soft and formed",
+  "Loose pieces",
+  "Mushy",
+  "Watery",
+];
+export const OBSERVATION_PERIODS = [
+  { value: "today", label: "Today so far" },
+  { value: "since-last", label: "Since the previous check-in" },
+  { value: "other", label: "Another period (describe in notes)" },
+] as const;
 export const METRICS = [
   {
     key: "appetite",
@@ -35,11 +56,74 @@ export const METRICS = [
   },
   {
     key: "urine",
-    name: "Bathroom",
-    question: "Any changes today?",
-    options: ["Normal", "Less than normal", "Count"],
+    name: "Urine",
+    question: "How does peeing compare with usual?",
+    options: URINE_OPTIONS,
+  },
+  {
+    key: "stool",
+    name: "Stool",
+    question: "What was their stool like?",
+    options: STOOL_OPTIONS,
   },
 ];
+
+/** Shared validation for forms and imported/stored records. Legacy value-only records remain valid. */
+export function validateBathroomData(data: Log["data"]) {
+  const counts = ["wetDiapers", "bowelMovements", "stoolDiapers"] as const;
+  for (const key of counts) {
+    const count = data[key];
+    if (
+      count !== undefined &&
+      (!Number.isInteger(count) || count < 0 || count > 999)
+    )
+      throw new Error("Counts must be whole numbers from 0 to 999.");
+  }
+  if (
+    data.observationPeriod !== undefined &&
+    !OBSERVATION_PERIODS.some((p) => p.value === data.observationPeriod)
+  )
+    throw new Error("Choose a supported observation period.");
+  if (
+    data.stoolConsistency !== undefined &&
+    !STOOL_OPTIONS.includes(data.stoolConsistency)
+  )
+    throw new Error("Choose a supported stool description.");
+  if (
+    (data.wetDiapers !== undefined && data.metricType !== "urine") ||
+    ((data.bowelMovements !== undefined ||
+      data.stoolDiapers !== undefined ||
+      data.stoolConsistency !== undefined) &&
+      data.metricType !== "stool") ||
+    (data.observationPeriod !== undefined &&
+      !["urine", "stool"].includes(data.metricType || ""))
+  )
+    throw new Error("Bathroom details belong to a urine or stool check-in.");
+  if (
+    data.metricType === "urine" &&
+    data.value === "No urine" &&
+    (data.wetDiapers || 0) > 0
+  )
+    throw new Error(
+      "A check-in with no urine cannot include wet diapers for the same period.",
+    );
+  if (
+    data.metricType === "stool" &&
+    (data.bowelMovements === undefined ||
+      data.value !==
+        `${data.bowelMovements} bowel movement${data.bowelMovements === 1 ? "" : "s"}`)
+  )
+    throw new Error("A stool check-in needs a matching bowel-movement count.");
+  if (
+    data.bowelMovements === 0 &&
+    (data.stoolConsistency !== undefined || (data.stoolDiapers || 0) > 0)
+  )
+    throw new Error(
+      "A check-in with no bowel movements cannot include stool output for the same period.",
+    );
+  if (data.observationPeriod === "other" && !data.notes?.trim())
+    throw new Error("Describe the period covered in notes.");
+}
 
 export function emptyDatabase(): Database {
   return {
@@ -138,6 +222,7 @@ export function parseDatabase(value: unknown): Database {
       "notes",
       "metricType",
       "value",
+      "stoolConsistency",
     ] as const) {
       if (source[key] !== undefined) {
         if (!str(source[key], key === "notes" ? 5000 : 200))
@@ -155,6 +240,37 @@ export function parseDatabase(value: unknown): Database {
     )
       throw new Error("A medicine interval is invalid.");
     data.frequencyHours = source.frequencyHours as number | null | undefined;
+    for (const key of [
+      "wetDiapers",
+      "bowelMovements",
+      "stoolDiapers",
+    ] as const) {
+      if (source[key] !== undefined) {
+        if (typeof source[key] !== "number")
+          throw new Error("A bathroom count is invalid.");
+        data[key] = source[key];
+      }
+    }
+    if (source.observationPeriod !== undefined) {
+      if (
+        !OBSERVATION_PERIODS.some((p) => p.value === source.observationPeriod)
+      )
+        throw new Error("A bathroom observation period is invalid.");
+      data.observationPeriod =
+        source.observationPeriod as Log["data"]["observationPeriod"];
+    }
+    validateBathroomData(data);
+    if (
+      log.type !== "METRIC" &&
+      [
+        "wetDiapers",
+        "bowelMovements",
+        "stoolDiapers",
+        "stoolConsistency",
+        "observationPeriod",
+      ].some((k) => source[k] !== undefined)
+    )
+      throw new Error("Bathroom details belong to a daily check-in.");
     if (
       (log.type === "MEDICINE" && !data.medicineName?.trim()) ||
       (log.type === "SYMPTOM" && !data.symptomName?.trim()) ||
@@ -250,6 +366,12 @@ export function relativeTime(time: number, now: number) {
         });
 }
 export function logTitle(log: Log) {
+  if (
+    log.type === "METRIC" &&
+    log.data.metricType === "urine" &&
+    !log.data.observationPeriod
+  )
+    return "Bathroom (previous check-in)";
   return log.type === "MEDICINE"
     ? log.data.medicineName || "Medicine"
     : log.type === "SYMPTOM"
@@ -290,7 +412,18 @@ export function logDetail(log: Log, unit: Unit = "F") {
         .filter(Boolean)
         .join(" · ") || "Symptom recorded"
     );
-  return [d.value, d.notes].filter(Boolean).join(" · ");
+  return [
+    d.value,
+    d.wetDiapers !== undefined &&
+      `${d.wetDiapers} wet diaper${d.wetDiapers === 1 ? "" : "s"}`,
+    d.stoolDiapers !== undefined &&
+      `${d.stoolDiapers} stool diaper${d.stoolDiapers === 1 ? "" : "s"}`,
+    d.stoolConsistency,
+    OBSERVATION_PERIODS.find((p) => p.value === d.observationPeriod)?.label,
+    d.notes,
+  ]
+    .filter((v) => v !== undefined && v !== false && v !== "")
+    .join(" · ");
 }
 /** One clock per medicine; latest entry wins even if it removes a previous interval. */
 export function medicineTimers(logs: Log[], now: number) {
@@ -410,6 +543,26 @@ export function demoDatabase(now: number): Database {
       type: "METRIC",
       timeGiven: now - 3 * 3600000,
       data: { metricType: "appetite", value: "Less than normal" },
+    },
+    {
+      type: "METRIC",
+      timeGiven: now - 2 * 3600000,
+      data: {
+        metricType: "urine",
+        value: "Usual amount",
+        observationPeriod: "today",
+      },
+    },
+    {
+      type: "METRIC",
+      timeGiven: now - 2 * 3600000,
+      data: {
+        metricType: "stool",
+        value: "1 bowel movement",
+        bowelMovements: 1,
+        stoolConsistency: "Soft and formed",
+        observationPeriod: "today",
+      },
     },
     {
       type: "SYMPTOM",
