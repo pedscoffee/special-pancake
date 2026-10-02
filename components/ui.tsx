@@ -2,11 +2,9 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import {
-  Activity,
   Clock3,
   Heart,
   Pill,
-  Thermometer,
   Utensils,
   Droplets,
   Bath,
@@ -16,6 +14,7 @@ import {
 import type { Log } from "@/lib/types";
 import { formatTime, logDetail, logTitle, relativeTime } from "@/lib/care";
 import { useCare } from "./care-provider";
+import { symptomAppearance } from "./symptom-icons";
 
 export function IconBox({
   icon: Icon,
@@ -122,13 +121,12 @@ export function EntryList({
   return (
     <div className={`entry-list ${compact ? "compact" : ""}`}>
       {logs.map((log) => {
+        const symptom = symptomAppearance(log.data.symptomName);
         const Icon =
           log.type === "MEDICINE"
             ? Pill
             : log.type === "SYMPTOM"
-              ? log.data.temp
-                ? Thermometer
-                : Activity
+              ? symptom.icon
               : log.data.metricType === "appetite"
                 ? Utensils
                 : log.data.metricType === "fluids" ||
@@ -139,7 +137,7 @@ export function EntryList({
           log.type === "MEDICINE"
             ? "sage"
             : log.type === "SYMPTOM"
-              ? "peach"
+              ? symptom.color
               : "mint";
         return (
           <button

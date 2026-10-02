@@ -31,7 +31,7 @@ npm start
 - **Family overview:** quick logging, a daily summary, recent care, and individual medicine clocks.
 - **Child profiles:** independent records, profile colors, optional birthdays, and an explicit edit flow.
 - **Medicine records:** common and custom shortcuts, free-text dosage, an optional instructed interval, backdated entries, and notes. The last recorded dose appears when logging the same medicine.
-- **Symptoms and daily care:** temperatures, symptom severity, notes, appetite, fluids, urine observations with optional wet-diaper counts, and stool check-ins with bowel-movement counts, optional stool-diaper counts, and descriptions.
+- **Symptoms and daily care:** 17 common symptom shortcuts with distinct icons, search, category filters, and custom observations; temperatures, severity, notes, appetite, fluids, urine observations with optional wet-diaper counts, and stool check-ins with bowel-movement counts, optional stool-diaper counts, and descriptions.
 - **Care history:** text search, inclusive date filters, record-type filters, editing, deletion with immediate undo, and CSV export.
 - **Reports:** an on-screen preview, date/type filters, clipboard copy, text download, and printing or saving as PDF through the browser.
 - **Safe backups:** export all family records; validate v1 or v2 JSON before reviewing and confirming a restore. Unreadable stored records remain untouched.

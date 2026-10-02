@@ -1085,6 +1085,54 @@ svg {
   gap: 23px;
   margin-top: 24px;
 }
+.symptom-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.symptom-controls .search-field {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.symptom-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.symptom-groups button {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: white;
+  color: var(--sage-dark);
+  font-size: 12px;
+}
+.symptom-groups button.selected {
+  background: var(--sage-dark);
+  color: white;
+  border-color: var(--sage-dark);
+}
+.symptom-groups button:hover {
+  border-color: var(--sage-dark);
+}
+.symptom-no-results {
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+.symptom-no-results button {
+  overflow-wrap: anywhere;
+  text-align: left;
+}
 .symptom-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1104,10 +1152,16 @@ svg {
 .symptom-tile strong {
   font-size: 13px;
   font-weight: 570;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.symptom-tile .icon-box {
+  flex-shrink: 0;
 }
 .symptom-tile > svg {
   margin-left: auto;
   color: #4b6551;
+  flex-shrink: 0;
 }
 .symptom-tile:hover {
   border-color: #d4e0d7;

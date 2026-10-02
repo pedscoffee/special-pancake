@@ -12,14 +12,7 @@ export const MEDICINES = [
   { name: "Pedialyte", detail: "Hydration", color: "blue" },
   { name: "Simethicone", detail: "Your care routine", color: "peach" },
 ];
-export const SYMPTOMS = [
-  "Fever",
-  "Cough",
-  "Vomiting",
-  "Diarrhea",
-  "Rash",
-  "Other symptom",
-];
+export { SYMPTOMS } from "./symptoms";
 export const URINE_OPTIONS = [
   "More than usual",
   "Usual amount",

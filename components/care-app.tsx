@@ -18,6 +18,7 @@ import {
   Pill,
   Plus,
   Settings2,
+  Search,
   ShieldCheck,
   CirclePlay,
   Thermometer,
@@ -36,9 +37,10 @@ import {
   MEDICINES,
   METRICS,
   medicineTimers,
-  SYMPTOMS,
   todayLogs,
 } from "@/lib/care";
+import { filterSymptoms, SYMPTOM_GROUPS } from "@/lib/symptoms";
+import { symptomAppearance } from "./symptom-icons";
 import { useCare } from "./care-provider";
 import {
   ClockNote,
@@ -1011,6 +1013,9 @@ function SymptomsView({
   add: EntryAction;
   edit: (log: Log) => void;
 }) {
+  const [search, setSearch] = useState("");
+  const [group, setGroup] = useState("All");
+  const symptoms = filterSymptoms(search, group);
   return (
     <>
       <div className="view-toolbar">
@@ -1023,28 +1028,61 @@ function SymptomsView({
           Log symptom
         </button>
       </div>
+      <div className="symptom-controls">
+        <div className="search-field">
+          <Search size={17} aria-hidden="true" />
+          <input
+            aria-label="Find a symptom"
+            placeholder="Find a symptom…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            maxLength={100}
+          />
+        </div>
+        <div
+          className="symptom-groups"
+          role="group"
+          aria-label="Symptom categories"
+        >
+          {["All", ...SYMPTOM_GROUPS].map((category) => (
+            <button
+              key={category}
+              className={group === category ? "selected" : ""}
+              aria-pressed={group === category}
+              onClick={() => setGroup(category)}
+            >
+              {category === "All" ? "All symptoms" : category}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="symptom-grid">
-        {SYMPTOMS.map((s, i) => (
+        {symptoms.map((s) => (
           <button
             className="symptom-tile"
-            key={s}
-            onClick={() => add("SYMPTOM", s === "Other symptom" ? "" : s)}
+            key={s.name}
+            onClick={() =>
+              add("SYMPTOM", s.name === "Other symptom" ? "" : s.name)
+            }
           >
-            <IconBox
-              icon={
-                s === "Fever"
-                  ? Thermometer
-                  : s === "Other symptom"
-                    ? Plus
-                    : Activity
-              }
-              color={["peach", "blue", "sage", "mint", "rose", "sage"][i]}
-            />
-            <strong>{s}</strong>
+            <IconBox icon={symptomAppearance(s.name).icon} color={s.color} />
+            <strong>{s.name}</strong>
             <Plus size={15} />
           </button>
         ))}
       </div>
+      {!symptoms.length && (
+        <div className="symptom-no-results" role="status">
+          <p>No matching shortcuts. You can still record what you noticed.</p>
+          <button
+            className="text-button"
+            onClick={() => add("SYMPTOM", search.trim())}
+          >
+            <Plus size={15} />
+            Log {search.trim() ? `“${search.trim()}”` : "another symptom"}
+          </button>
+        </div>
+      )}
       <div className="symptoms-lower">
         <section className="card">
           <SectionHeading

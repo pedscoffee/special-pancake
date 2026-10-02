@@ -14,6 +14,7 @@ import {
   METRICS,
   relativeTime,
   validateBathroomData,
+  SYMPTOMS,
 } from "@/lib/care";
 import type { Log, LogType } from "@/lib/types";
 
@@ -214,11 +215,19 @@ export function EntryForm({
               autoFocus
               required
               maxLength={100}
+              list={kind === "SYMPTOM" ? "symptom-presets" : undefined}
               value={entryName}
               onChange={(e) => setEntryName(e.target.value)}
               placeholder={kind === "MEDICINE" ? "e.g. Tylenol" : "e.g. Cough"}
             />
           </label>
+        )}
+        {kind === "SYMPTOM" && (
+          <datalist id="symptom-presets">
+            {SYMPTOMS.filter((s) => s !== "Other symptom").map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
         )}
         {kind === "MEDICINE" && (
           <>
@@ -379,7 +388,11 @@ export function EntryForm({
             defaultValue={log?.data.notes}
             maxLength={5000}
             rows={3}
-            placeholder="Anything you’d like to remember…"
+            placeholder={
+              kind === "SYMPTOM" && entryName.trim().toLowerCase() === "pain"
+                ? "Where does it hurt? Anything else you noticed…"
+                : "Anything you’d like to remember…"
+            }
           />
         </label>
         {error && (
