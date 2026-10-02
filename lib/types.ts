@@ -25,6 +25,11 @@ export type Log = {
     notes?: string;
     metricType?: string;
     value?: string;
+    observationPeriod?: "today" | "since-last" | "other";
+    wetDiapers?: number;
+    bowelMovements?: number;
+    stoolDiapers?: number;
+    stoolConsistency?: string;
   };
 };
 export type Database = {

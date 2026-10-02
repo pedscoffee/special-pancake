@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Clock3, Info, Plus, Trash2, Check } from "lucide-react";
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
+import { BathroomFields } from "./bathroom-fields";
 import {
   childLogs,
   convertTemperature,
@@ -12,6 +13,8 @@ import {
   MEDICINES,
   METRICS,
   relativeTime,
+  validateBathroomData,
+  SYMPTOMS,
 } from "@/lib/care";
 import type { Log, LogType } from "@/lib/types";
 
@@ -46,7 +49,9 @@ export function EntryForm({
       ? log.data.value
       : log?.data.value
         ? "Count"
-        : "Normal",
+        : kind === "METRIC" && name === "urine"
+          ? ""
+          : "Normal",
   );
   if (!db) return null;
   const child = db.children.find((c) => c.id === childId)!;
@@ -116,6 +121,39 @@ export function EntryForm({
       data.metricType = title;
       data.value =
         metricValue === "Count" ? `${form.get("count")} times` : metricValue;
+      if (title === "urine" || title === "stool") {
+        if (title === "urine" && !metricValue) {
+          setError("Choose how their peeing compares with usual.");
+          return;
+        }
+        const period = String(form.get("observationPeriod") || "");
+        if (period)
+          data.observationPeriod = period as Log["data"]["observationPeriod"];
+        for (const key of [
+          "wetDiapers",
+          "bowelMovements",
+          "stoolDiapers",
+        ] as const) {
+          const raw = form.get(key);
+          if (raw !== null && String(raw).trim() !== "")
+            data[key] = Number(raw);
+        }
+        if (title === "stool") {
+          data.value = `${data.bowelMovements} bowel movement${data.bowelMovements === 1 ? "" : "s"}`;
+          const description = String(form.get("stoolConsistency") || "");
+          if (description) data.stoolConsistency = description;
+        }
+        try {
+          validateBathroomData(data);
+        } catch (problem) {
+          setError(
+            problem instanceof Error
+              ? problem.message
+              : "Check your bathroom details.",
+          );
+          return;
+        }
+      }
     }
     const entry: Log = {
       id: log?.id || crypto.randomUUID(),
@@ -159,7 +197,8 @@ export function EntryForm({
               value={entryName}
               onChange={(e) => {
                 setEntryName(e.target.value);
-                setMetricValue("Normal");
+                setMetricValue(e.target.value === "urine" ? "" : "Normal");
+                setError("");
               }}
             >
               {METRICS.map((m) => (
@@ -176,11 +215,19 @@ export function EntryForm({
               autoFocus
               required
               maxLength={100}
+              list={kind === "SYMPTOM" ? "symptom-presets" : undefined}
               value={entryName}
               onChange={(e) => setEntryName(e.target.value)}
               placeholder={kind === "MEDICINE" ? "e.g. Tylenol" : "e.g. Cough"}
             />
           </label>
+        )}
+        {kind === "SYMPTOM" && (
+          <datalist id="symptom-presets">
+            {SYMPTOMS.filter((s) => s !== "Other symptom").map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
         )}
         {kind === "MEDICINE" && (
           <>
@@ -260,21 +307,29 @@ export function EntryForm({
           ))}
         {kind === "METRIC" && (
           <>
-            <label>
-              {metric.question}
-              <select
-                value={metricValue}
-                onChange={(e) => setMetricValue(e.target.value)}
-              >
-                {!metric.options.includes(metricValue) && (
-                  <option>{metricValue}</option>
-                )}
-                {metric.options.map((o) => (
-                  <option key={o}>{o}</option>
-                ))}
-              </select>
-            </label>
-            {metricValue === "Count" && (
+            {entryName !== "stool" && (
+              <label>
+                {metric.question}
+                <select
+                  value={metricValue}
+                  required
+                  onChange={(e) => setMetricValue(e.target.value)}
+                >
+                  {entryName === "urine" && (
+                    <option value="" disabled>
+                      Choose an observation
+                    </option>
+                  )}
+                  {!metric.options.includes(metricValue) && metricValue && (
+                    <option>{metricValue}</option>
+                  )}
+                  {metric.options.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {metricValue === "Count" && entryName !== "stool" && (
               <label>
                 Number of times
                 <input
@@ -283,9 +338,18 @@ export function EntryForm({
                   required
                   min="0"
                   max="100"
+                  step="1"
                   defaultValue={log?.data.value?.split(" ")[0] || ""}
                 />
               </label>
+            )}
+            {(entryName === "urine" || entryName === "stool") && (
+              <BathroomFields
+                key={entryName}
+                metricType={entryName}
+                value={metricValue}
+                log={log}
+              />
             )}
           </>
         )}
@@ -324,7 +388,11 @@ export function EntryForm({
             defaultValue={log?.data.notes}
             maxLength={5000}
             rows={3}
-            placeholder="Anything you’d like to remember…"
+            placeholder={
+              kind === "SYMPTOM" && entryName.trim().toLowerCase() === "pain"
+                ? "Where does it hurt? Anything else you noticed…"
+                : "Anything you’d like to remember…"
+            }
           />
         </label>
         {error && (

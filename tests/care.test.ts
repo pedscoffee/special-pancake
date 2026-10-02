@@ -5,9 +5,12 @@ import {
   convertTemperature,
   filterLogs,
   localDate,
+  logDetail,
+  logTitle,
   makeReport,
   medicineTimers,
   parseDatabase,
+  demoDatabase,
 } from "../lib/care";
 import type { Database, Log } from "../lib/types";
 
@@ -66,6 +69,166 @@ test("v1 migration preserves IDs, recorded times, shortcuts, and source temperat
     convertTemperature(db.logs[0].data.temp!, db.logs[0].data.tempUnit!, "F"),
     "100.4",
   );
+});
+
+test("bathroom observations survive backups, search and reports without combining counts", () => {
+  const db = database();
+  db.logs = [
+    {
+      ...medicine("urine", "A", 1),
+      type: "METRIC",
+      data: {
+        metricType: "urine",
+        value: "Much less, but still peeing",
+        observationPeriod: "today",
+        wetDiapers: 2,
+      },
+    },
+    {
+      ...medicine("stool", "A", 2),
+      type: "METRIC",
+      data: {
+        metricType: "stool",
+        value: "2 bowel movements",
+        observationPeriod: "since-last",
+        bowelMovements: 2,
+        stoolDiapers: 1,
+        stoolConsistency: "Mushy",
+        notes: "Mixed diaper at lunch",
+      },
+    },
+    {
+      ...medicine("zero", "A", 3),
+      type: "METRIC",
+      data: {
+        metricType: "stool",
+        value: "0 bowel movements",
+        observationPeriod: "today",
+        bowelMovements: 0,
+        stoolDiapers: 0,
+      },
+    },
+  ];
+  const restored = parseDatabase(JSON.parse(JSON.stringify(db)));
+  assert.deepEqual(JSON.parse(JSON.stringify(restored.logs)), db.logs);
+  assert.equal(logTitle(restored.logs[0]), "Urine");
+  assert.equal(logTitle(restored.logs[1]), "Stool");
+  assert.match(logDetail(restored.logs[0]), /2 wet diapers/);
+  assert.match(
+    logDetail(restored.logs[1]),
+    /2 bowel movements · 1 stool diaper · Mushy/,
+  );
+  assert.match(
+    logDetail(restored.logs[2]),
+    /0 bowel movements · 0 stool diapers/,
+  );
+  assert.deepEqual(
+    filterLogs(restored.logs, { search: "mushy" }).map((l) => l.id),
+    ["stool"],
+  );
+  const report = makeReport("Ella", restored.logs, db.settings, "", "");
+  assert.match(
+    report,
+    /Much less, but still peeing · 2 wet diapers · Today so far/,
+  );
+  assert.match(report, /Since the previous check-in/);
+  assert.match(report, /Mixed diaper at lunch/);
+  assert.doesNotMatch(report, /3 diapers/);
+});
+
+test("legacy bathroom values remain intact and missing counts remain distinct from zero", () => {
+  const db = database();
+  db.logs = [
+    {
+      ...medicine("old", "A", 1),
+      type: "METRIC",
+      data: {
+        metricType: "urine",
+        value: "4 times",
+        notes: "Previously recorded",
+      },
+    },
+    {
+      ...medicine("blank", "A", 2),
+      type: "METRIC",
+      data: {
+        metricType: "urine",
+        value: "Usual amount",
+        observationPeriod: "today",
+      },
+    },
+    {
+      ...medicine("zero", "A", 3),
+      type: "METRIC",
+      data: {
+        metricType: "urine",
+        value: "No urine",
+        observationPeriod: "today",
+        wetDiapers: 0,
+      },
+    },
+  ];
+  const restored = parseDatabase(db);
+  assert.equal(logTitle(restored.logs[0]), "Bathroom (previous check-in)");
+  assert.equal(restored.logs[0].data.value, "4 times");
+  assert.equal(restored.logs[0].data.observationPeriod, undefined);
+  assert.equal(restored.logs[1].data.wetDiapers, undefined);
+  assert.doesNotMatch(logDetail(restored.logs[1]), /diaper/);
+  assert.match(logDetail(restored.logs[2]), /0 wet diapers/);
+});
+
+test("invalid bathroom counts and conflicting output are rejected before restore", () => {
+  const base = {
+    metricType: "stool",
+    value: "1 bowel movement",
+    bowelMovements: 1,
+    observationPeriod: "today",
+  };
+  const invalid = [
+    ...[-1, 0.5, 1000, Infinity, "2", null].map((stoolDiapers) => ({
+      ...base,
+      stoolDiapers,
+    })),
+    { ...base, stoolConsistency: "not a supported description" },
+    { ...base, observationPeriod: "yesterday" },
+    { ...base, observationPeriod: "other", notes: " " },
+    { ...base, value: "3 bowel movements" },
+    { ...base, bowelMovements: undefined },
+    { ...base, wetDiapers: 1 },
+    { ...base, value: "0 bowel movements", bowelMovements: 0, stoolDiapers: 1 },
+    {
+      ...base,
+      value: "0 bowel movements",
+      bowelMovements: 0,
+      stoolConsistency: "Watery",
+    },
+    { metricType: "urine", value: "No urine", wetDiapers: 1 },
+    { metricType: "fluids", value: "Normal", wetDiapers: 1 },
+  ];
+  for (const data of invalid)
+    assert.throws(() =>
+      parseDatabase({
+        ...database(),
+        logs: [{ ...medicine("invalid", "A", 1), type: "METRIC", data }],
+      }),
+    );
+  assert.doesNotThrow(() =>
+    parseDatabase({
+      ...database(),
+      logs: [
+        {
+          ...medicine("other-period", "A", 1),
+          type: "METRIC",
+          data: {
+            ...base,
+            observationPeriod: "other",
+            notes: "Since breakfast",
+          },
+        },
+      ],
+    }),
+  );
+  assert.doesNotThrow(() => parseDatabase(demoDatabase(now)));
 });
 test("malformed backups, duplicate IDs, and unknown schema versions are rejected", () => {
   for (const input of [
