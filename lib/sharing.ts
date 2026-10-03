@@ -208,7 +208,15 @@ export function recordSignature(log: Log) {
     data: Object.fromEntries(
       Object.entries(log.data)
         .filter(([, v]) => v !== undefined)
-        .sort(([a], [b]) => a.localeCompare(b)),
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => [
+          key,
+          key === "symptomDetails" && value && typeof value === "object"
+            ? Object.fromEntries(
+                Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+              )
+            : value,
+        ]),
     ),
   });
 }

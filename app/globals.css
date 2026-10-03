@@ -1839,6 +1839,53 @@ textarea.report-text {
   flex-direction: column;
   gap: 19px;
 }
+.daily-form-section,
+.observation-fields {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+}
+.modal.checkin-modal {
+  width: min(800px, calc(100% - 32px));
+}
+.daily-checkin-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.daily-checkin-form > .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 640px) {
+  .daily-checkin-sections,
+  .daily-checkin-form > .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.daily-form-section legend,
+.observation-fields legend {
+  padding: 0 6px;
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.daily-form-section legend svg {
+  vertical-align: middle;
+  margin-right: 5px;
+  color: var(--sage);
+}
+.optional-inline {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+.daily-checkin-form .form-stack,
+.observation-fields {
+  gap: 14px;
+}
 label {
   color: #4f6454;
   font-size: 12px;

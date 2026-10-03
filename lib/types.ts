@@ -22,6 +22,8 @@ export type Log = {
     temp?: string;
     tempUnit?: Unit;
     severity?: string;
+    symptomDetails?: Record<string, string>;
+    symptomCount?: number;
     notes?: string;
     metricType?: string;
     value?: string;

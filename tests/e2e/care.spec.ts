@@ -118,9 +118,11 @@ test("daily check-ins, history search, and reports include care notes", async ({
   await page
     .getByRole("button", { name: "Daily check-in Meals, fluids & bathroom" })
     .click();
-  await page.getByLabel("Keeping hydrated?").selectOption("Normal");
+  await page
+    .getByLabel("Drinking compared with usual")
+    .selectOption("Usual amount");
   await page.getByLabel("Notes optional").fill("Water at breakfast");
-  await page.getByRole("button", { name: "Save entry" }).click();
+  await page.getByRole("button", { name: "Save check-in" }).click();
   await page.goto("/history/");
   await page
     .getByRole("textbox", { name: "Search care history" })

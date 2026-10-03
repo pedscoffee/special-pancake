@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { SYMPTOM_PRESETS } from "../../lib/symptoms";
+import { symptomObservation } from "../../lib/symptom-observations";
 
 test("every symptom has a distinct icon shared by observations, overview and history", async ({
   page,
@@ -23,6 +24,14 @@ test("every symptom has a distinct icon shared by observations, overview and his
     if (preset.name === "Fever")
       await dialog.getByLabel("Temperature (°F) optional").fill("100.4");
     else await dialog.getByLabel("Severity").selectOption("Moderate");
+    const observation = symptomObservation(preset.name);
+    if (observation.countLabel)
+      await dialog.getByLabel(observation.countLabel).fill("2");
+    for (const field of observation.fields) {
+      const input = dialog.getByLabel(field.label);
+      if (field.options) await input.selectOption(field.options[0]);
+      else await input.fill("Left knee");
+    }
     if (preset.name === "Pain")
       await dialog
         .getByPlaceholder("Where does it hurt? Anything else you noticed…")
@@ -40,6 +49,18 @@ test("every symptom has a distinct icon shared by observations, overview and his
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs,
   );
   expect(rows).toHaveLength(SYMPTOM_PRESETS.length - 1);
+  expect(
+    rows.find(
+      (r: { data: { symptomName: string } }) =>
+        r.data.symptomName === "Earache",
+    ).data.symptomDetails.side,
+  ).toBe("Left");
+  expect(
+    rows.find(
+      (r: { data: { symptomName: string } }) =>
+        r.data.symptomName === "Vomiting",
+    ).data.symptomCount,
+  ).toBe(2);
   expect(
     rows.find(
       (r: { data: { symptomName: string } }) => r.data.symptomName === "Pain",

@@ -36,11 +36,13 @@ export function Modal({
   subtitle,
   children,
   onClose,
+  className = "",
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -65,7 +67,7 @@ export function Modal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="modal"
+      className={`modal ${className}`.trim()}
     >
       <div className="modal-inner">
         <div className="modal-heading">

@@ -31,7 +31,8 @@ npm start
 - **Family overview:** quick logging, a daily summary, recent care, and individual medicine clocks.
 - **Child profiles:** independent records, profile colors, optional birthdays, and an explicit edit flow.
 - **Medicine records:** common and custom shortcuts, free-text dosage, an optional instructed interval, backdated entries, and notes. The last recorded dose appears when logging the same medicine.
-- **Symptoms and daily care:** 17 common symptom shortcuts with distinct icons, search, category filters, and custom observations; temperatures, severity, notes, appetite, fluids, urine observations with optional wet-diaper counts, and stool check-ins with bowel-movement counts, optional stool-diaper counts, and descriptions.
+- **Symptoms:** 17 common shortcuts with distinct icons, search, category filters, and custom observations. Optional details tailored to each symptom include cough sound/frequency, pain location, earache side, rash appearance, dizziness description, temperature method, and scoped vomiting/diarrhea counts. Severity is optional and starts unrecorded.
+- **Daily care:** one form for appetite, fluids, urine, and stool, with one time, observation period, and Save button. Blank sections are skipped. Optional wet/stool diaper counts and stool descriptions stay with their own observations. Individual entries remain editable.
 - **Care history:** text search, inclusive date filters, record-type filters, editing, deletion with immediate undo, and CSV export.
 - **Reports:** an on-screen preview, date/type filters, clipboard copy, text download, and printing or saving as PDF through the browser.
 - **Share care:** a personal message, readable snapshot, and importable care file for the selected child and report filters. Receive care reviews new entries, skips duplicates, and lets you choose between differing versions without replacing family data.
@@ -47,6 +48,10 @@ When served at the **same origin and in the same browser** as the original app, 
 Temperature entries store their original unit. Switching °F/°C converts their display without changing the original measurement. Legacy temperatures inherit the old backup's temperature preference because the original app did not save units per entry.
 
 Bathroom check-ins have separate **Urine** and **Stool** entries. Diaper counts stay with each observation; a mixed diaper can be included in both counts, and those counts are never combined into a total. Choose the period covered: today so far, since the previous check-in of the same kind, or another period described in notes. Repeated daily snapshots aren't summed. Blank diaper counts mean not recorded; zero is an explicit observation. Stool descriptions are optional, original plain-language choices, not a reproduction of a clinical stool chart. Existing bathroom records retain their original values and appear as previous check-ins, without inventing diaper counts or observation periods.
+
+Use **Daily check-in** in the overview's quick actions, or **Check in** on the daily care card, to record all four areas together. Every new form starts blank. Save any subset of the sections; the app adds the answered sections together in one storage write, with the chosen time/period and notes on each entry. A failed save keeps the previous records unchanged. Existing individual shortcuts still support quick updates, and history lets you edit each saved observation.
+
+Symptom details are optional descriptions of what a caregiver noticed or a child reported. Vomiting and diarrhea counts require a period; snapshots are not summed. Changing the symptom clears details belonging to the previous symptom. New details are preserved in backups, reports, search, and shared care files. Older entries keep their original severity and daily-care wording, without adding observations retrospectively.
 
 Invalid records are never silently replaced. A recovery message directs you to Settings, where you can download the original raw storage or restore a valid backup.
 

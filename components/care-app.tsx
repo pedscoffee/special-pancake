@@ -51,6 +51,7 @@ import {
   SectionHeading,
 } from "./ui";
 import { EntryForm } from "./entry-form";
+import { DailyCheckInForm } from "./daily-checkin-form";
 import { ChildForm } from "./child-form";
 import { HistoryView, ReportsView, SettingsView } from "./record-views";
 
@@ -67,6 +68,7 @@ const NAV = [
   { view: "reports", label: "Reports", href: "/reports/", icon: FileText },
 ] as const;
 type Popup =
+  | { kind: "daily-checkin" }
   | { kind: "entry"; type: LogType; name?: string; log?: Log }
   | { kind: "child"; child?: Child }
   | { kind: "delete-log"; log: Log }
@@ -186,7 +188,11 @@ export function CareApp({ view }: { view: View }) {
     db?.children[0];
   const logs = db && activeChild ? childLogs(db, activeChild.id) : [];
   const add: EntryAction = (type, name) =>
-    setPopup({ kind: "entry", type, name });
+    setPopup(
+      type === "METRIC" && !name
+        ? { kind: "daily-checkin" }
+        : { kind: "entry", type, name },
+    );
   const edit = (log: Log) => setPopup({ kind: "entry", type: log.type, log });
   const title =
     view === "overview"
@@ -515,6 +521,13 @@ export function CareApp({ view }: { view: View }) {
           onDelete={(log) => setPopup({ kind: "delete-log", log })}
         />
       )}
+      {popup?.kind === "daily-checkin" && activeChild && (
+        <DailyCheckInForm
+          key={activeChild.id}
+          childId={activeChild.id}
+          onClose={() => setPopup(null)}
+        />
+      )}
       {popup?.kind === "child" && (
         <ChildForm
           child={popup.child}
@@ -740,10 +753,7 @@ function Overview({
               </span>
               <Plus size={17} />
             </button>
-            <button
-              className="quick-action"
-              onClick={() => add("METRIC", "fluids")}
-            >
+            <button className="quick-action" onClick={() => add("METRIC")}>
               <IconBox icon={Droplets} color="mint" small />
               <span>
                 <strong>Daily check-in</strong>
@@ -1125,9 +1135,15 @@ export function DailyChecks({
     <section className={`card daily-checks ${compact ? "compact" : ""}`}>
       <SectionHeading
         title="Daily check-in"
-        aside={<span className="tiny-label">TODAY</span>}
+        aside={
+          <button className="text-button" onClick={() => add("METRIC")}>
+            Check in <Plus size={14} />
+          </button>
+        }
       />
-      <p className="section-description">How’s their day going?</p>
+      <p className="section-description">
+        Meals, fluids, and bathroom in one check-in.
+      </p>
       {METRICS.map((m, i) => {
         const last = today.find(
           (l) => l.type === "METRIC" && l.data.metricType === m.key,

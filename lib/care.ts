@@ -1,4 +1,9 @@
 import type { Database, Log, Unit } from "./types";
+import {
+  parseSymptomDetails,
+  symptomDetailText,
+  validateSymptomData,
+} from "./symptom-observations";
 
 export const STORAGE_KEY = "kiddymeds_db_v2";
 export const LEGACY_KEY = "kiddymeds_db_v1";
@@ -38,14 +43,26 @@ export const METRICS = [
   {
     key: "appetite",
     name: "Appetite",
-    question: "How are meals going?",
-    options: ["Normal", "Less than normal", "None"],
+    question: "Eating or feeding compared with usual",
+    options: [
+      "More than usual",
+      "Usual amount",
+      "Less than usual",
+      "Only small amounts",
+      "No food or feeds",
+    ],
   },
   {
     key: "fluids",
     name: "Fluids",
-    question: "Keeping hydrated?",
-    options: ["Normal", "Less than normal", "Only a little", "None"],
+    question: "Drinking compared with usual",
+    options: [
+      "More than usual",
+      "Usual amount",
+      "Less than usual",
+      "Only small sips or short feeds",
+      "No fluids or feeds",
+    ],
   },
   {
     key: "urine",
@@ -89,9 +106,11 @@ export function validateBathroomData(data: Log["data"]) {
       data.stoolConsistency !== undefined) &&
       data.metricType !== "stool") ||
     (data.observationPeriod !== undefined &&
-      !["urine", "stool"].includes(data.metricType || ""))
+      !METRICS.some((m) => m.key === data.metricType))
   )
-    throw new Error("Bathroom details belong to a urine or stool check-in.");
+    throw new Error(
+      "Counts and stool descriptions belong to a urine or stool check-in; periods belong to daily check-ins.",
+    );
   if (
     data.metricType === "urine" &&
     data.value === "No urine" &&
@@ -206,6 +225,22 @@ export function parseDatabase(value: unknown): Database {
     logIds.add(log.id);
     const source = log.data;
     const data: Log["data"] = {};
+    if (
+      source.symptomDetails !== undefined ||
+      source.symptomCount !== undefined
+    ) {
+      if (log.type !== "SYMPTOM")
+        throw new Error("Symptom details belong to a symptom record.");
+      data.symptomDetails = parseSymptomDetails(
+        String(source.symptomName || ""),
+        source.symptomDetails,
+      );
+      if (source.symptomCount !== undefined) {
+        if (typeof source.symptomCount !== "number")
+          throw new Error("A symptom count is invalid.");
+        data.symptomCount = source.symptomCount;
+      }
+    }
     for (const key of [
       "medicineName",
       "dosage",
@@ -253,6 +288,7 @@ export function parseDatabase(value: unknown): Database {
         source.observationPeriod as Log["data"]["observationPeriod"];
     }
     validateBathroomData(data);
+    if (log.type === "SYMPTOM") validateSymptomData(data);
     if (
       log.type !== "METRIC" &&
       [
@@ -400,6 +436,7 @@ export function logDetail(log: Log, unit: Unit = "F") {
         d.temp &&
           `${convertTemperature(d.temp, d.tempUnit || unit, unit)}°${unit}`,
         d.severity,
+        ...symptomDetailText(d),
         d.notes,
       ]
         .filter(Boolean)

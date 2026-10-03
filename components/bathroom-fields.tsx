@@ -8,10 +8,16 @@ export function BathroomFields({
   metricType,
   value,
   log,
+  prefix = "",
+  showPeriod = true,
+  optional = false,
 }: {
   metricType: string;
   value: string;
   log?: Log;
+  prefix?: string;
+  showPeriod?: boolean;
+  optional?: boolean;
 }) {
   const data = log?.data.metricType === metricType ? log.data : undefined;
   const [bowelMovements, setBowelMovements] = useState(
@@ -20,40 +26,44 @@ export function BathroomFields({
   const noStool = bowelMovements === "0";
   return (
     <>
-      <label>
-        Period covered
-        <select
-          name="observationPeriod"
-          defaultValue={data ? data.observationPeriod || "" : "today"}
-        >
-          {data && !data.observationPeriod && (
-            <option value="">Not specified (previous entry)</option>
-          )}
-          {OBSERVATION_PERIODS.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="field-hint">
-        Record observations for this period. “Today so far” is a snapshot;
-        repeated check-ins aren’t added together. For “since the previous
-        check-in,” use the last {metricType === "urine" ? "urine" : "stool"}{" "}
-        entry.
-      </p>
+      {showPeriod && (
+        <>
+          <label>
+            Period covered
+            <select
+              name="observationPeriod"
+              defaultValue={data ? data.observationPeriod || "" : "today"}
+            >
+              {data && !data.observationPeriod && (
+                <option value="">Not specified (previous entry)</option>
+              )}
+              {OBSERVATION_PERIODS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="field-hint">
+            Record observations for this period. “Today so far” is a snapshot;
+            repeated check-ins aren’t added together. For “since the previous
+            check-in,” use the last {metricType === "urine" ? "urine" : "stool"}{" "}
+            entry.
+          </p>
+        </>
+      )}
       {metricType === "urine" ? (
         <>
           <label>
             Wet diapers <span className="optional">optional</span>
             <input
-              name="wetDiapers"
+              name={`${prefix}wetDiapers`}
               type="number"
               min="0"
               max="999"
               step="1"
               defaultValue={data?.wetDiapers ?? ""}
-              disabled={value === "No urine"}
+              disabled={value === "No urine" || (optional && !value)}
               placeholder="Leave blank if not counting diapers"
               aria-describedby="urine-diaper-hint"
             />
@@ -70,9 +80,9 @@ export function BathroomFields({
             <label>
               Bowel movements
               <input
-                name="bowelMovements"
+                name={`${prefix}bowelMovements`}
                 type="number"
-                required
+                required={!optional}
                 min="0"
                 max="999"
                 step="1"
@@ -84,13 +94,13 @@ export function BathroomFields({
             <label>
               Stool diapers <span className="optional">optional</span>
               <input
-                name="stoolDiapers"
+                name={`${prefix}stoolDiapers`}
                 type="number"
                 min="0"
                 max="999"
                 step="1"
                 defaultValue={data?.stoolDiapers ?? ""}
-                disabled={noStool}
+                disabled={noStool || (optional && !bowelMovements)}
                 placeholder="If using diapers"
                 aria-describedby="stool-diaper-hint"
               />
@@ -104,9 +114,9 @@ export function BathroomFields({
           <label>
             Stool description <span className="optional">optional</span>
             <select
-              name="stoolConsistency"
+              name={`${prefix}stoolConsistency`}
               defaultValue={data?.stoolConsistency || ""}
-              disabled={noStool}
+              disabled={noStool || (optional && !bowelMovements)}
               aria-describedby="stool-description-hint"
             >
               <option value="">Not recorded</option>

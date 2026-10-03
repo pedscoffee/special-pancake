@@ -5,6 +5,12 @@ import { Clock3, Info, Plus, Trash2, Check } from "lucide-react";
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
 import { BathroomFields } from "./bathroom-fields";
+import { SymptomFields } from "./symptom-fields";
+import {
+  symptomObservation,
+  validateSymptomData,
+} from "@/lib/symptom-observations";
+import { symptomPreset } from "@/lib/symptoms";
 import {
   childLogs,
   convertTemperature,
@@ -14,6 +20,7 @@ import {
   METRICS,
   relativeTime,
   validateBathroomData,
+  OBSERVATION_PERIODS,
   SYMPTOMS,
 } from "@/lib/care";
 import type { Log, LogType } from "@/lib/types";
@@ -51,7 +58,7 @@ export function EntryForm({
         ? "Count"
         : kind === "METRIC" && name === "urine"
           ? ""
-          : "Normal",
+          : "",
   );
   if (!db) return null;
   const child = db.children.find((c) => c.id === childId)!;
@@ -115,20 +122,45 @@ export function EntryForm({
         data.tempUnit = unchanged
           ? log!.data.tempUnit || db!.settings.tempUnit
           : db!.settings.tempUnit;
-      } else data.severity = String(form.get("severity") || "Mild");
+      } else {
+        const severity = String(form.get("severity") || "");
+        if (severity) data.severity = severity;
+      }
+      const details = Object.fromEntries(
+        symptomObservation(title)
+          .fields.map((field) => [
+            field.key,
+            String(form.get(`detail:${field.key}`) || "").trim(),
+          ])
+          .filter(([, value]) => value),
+      );
+      if (Object.keys(details).length) data.symptomDetails = details;
+      const count = form.get("symptomCount");
+      if (count !== null && String(count).trim() !== "")
+        data.symptomCount = Number(count);
+      try {
+        validateSymptomData(data);
+      } catch (problem) {
+        setError(
+          problem instanceof Error
+            ? problem.message
+            : "Check your symptom details.",
+        );
+        return;
+      }
     }
     if (kind === "METRIC") {
       data.metricType = title;
       data.value =
         metricValue === "Count" ? `${form.get("count")} times` : metricValue;
+      const period = String(form.get("observationPeriod") || "");
+      if (period)
+        data.observationPeriod = period as Log["data"]["observationPeriod"];
       if (title === "urine" || title === "stool") {
         if (title === "urine" && !metricValue) {
           setError("Choose how their peeing compares with usual.");
           return;
         }
-        const period = String(form.get("observationPeriod") || "");
-        if (period)
-          data.observationPeriod = period as Log["data"]["observationPeriod"];
         for (const key of [
           "wetDiapers",
           "bowelMovements",
@@ -143,16 +175,16 @@ export function EntryForm({
           const description = String(form.get("stoolConsistency") || "");
           if (description) data.stoolConsistency = description;
         }
-        try {
-          validateBathroomData(data);
-        } catch (problem) {
-          setError(
-            problem instanceof Error
-              ? problem.message
-              : "Check your bathroom details.",
-          );
-          return;
-        }
+      }
+      try {
+        validateBathroomData(data);
+      } catch (problem) {
+        setError(
+          problem instanceof Error
+            ? problem.message
+            : "Check your bathroom details.",
+        );
+        return;
       }
     }
     const entry: Log = {
@@ -197,7 +229,7 @@ export function EntryForm({
               value={entryName}
               onChange={(e) => {
                 setEntryName(e.target.value);
-                setMetricValue(e.target.value === "urine" ? "" : "Normal");
+                setMetricValue("");
                 setError("");
               }}
             >
@@ -275,36 +307,45 @@ export function EntryForm({
             </p>
           </>
         )}
-        {kind === "SYMPTOM" &&
-          (entryName.toLowerCase() === "fever" ? (
-            <label>
-              Temperature (°{db.settings.tempUnit}){" "}
-              <span className="optional">optional</span>
-              <input
-                name="temperature"
-                type="number"
-                step="0.1"
-                min={db.settings.tempUnit === "F" ? 70 : 20}
-                max={db.settings.tempUnit === "F" ? 120 : 50}
-                defaultValue={tempInitial}
-                placeholder={
-                  db.settings.tempUnit === "F" ? "e.g. 100.4" : "e.g. 38.0"
-                }
-              />
-            </label>
-          ) : (
-            <label>
-              Severity
-              <select
-                name="severity"
-                defaultValue={log?.data.severity || "Mild"}
-              >
-                <option>Mild</option>
-                <option>Moderate</option>
-                <option>Severe</option>
-              </select>
-            </label>
-          ))}
+        {kind === "SYMPTOM" && entryName.trim().toLowerCase() === "fever" && (
+          <label>
+            Temperature (°{db.settings.tempUnit}){" "}
+            <span className="optional">optional</span>
+            <input
+              name="temperature"
+              type="number"
+              step="0.1"
+              min={db.settings.tempUnit === "F" ? 70 : 20}
+              max={db.settings.tempUnit === "F" ? 120 : 50}
+              defaultValue={tempInitial}
+              placeholder={
+                db.settings.tempUnit === "F" ? "e.g. 100.4" : "e.g. 38.0"
+              }
+            />
+          </label>
+        )}
+        {kind === "SYMPTOM" && (
+          <SymptomFields
+            key={symptomPreset(entryName)?.name || entryName}
+            name={entryName}
+            log={log}
+          />
+        )}
+        {kind === "SYMPTOM" && entryName.trim().toLowerCase() !== "fever" && (
+          <label>
+            Severity <span className="optional">optional</span>
+            <select name="severity" defaultValue={log?.data.severity || ""}>
+              <option value="">Not recorded</option>
+              {log?.data.severity &&
+                !["Mild", "Moderate", "Severe"].includes(log.data.severity) && (
+                  <option>{log.data.severity}</option>
+                )}
+              <option>Mild</option>
+              <option>Moderate</option>
+              <option>Severe</option>
+            </select>
+          </label>
+        )}
         {kind === "METRIC" && (
           <>
             {entryName !== "stool" && (
@@ -315,7 +356,7 @@ export function EntryForm({
                   required
                   onChange={(e) => setMetricValue(e.target.value)}
                 >
-                  {entryName === "urine" && (
+                  {!metricValue && (
                     <option value="" disabled>
                       Choose an observation
                     </option>
@@ -350,6 +391,26 @@ export function EntryForm({
                 value={metricValue}
                 log={log}
               />
+            )}
+            {entryName !== "urine" && entryName !== "stool" && (
+              <label>
+                Period covered
+                <select
+                  name="observationPeriod"
+                  defaultValue={
+                    log ? log.data.observationPeriod || "" : "today"
+                  }
+                >
+                  {log && !log.data.observationPeriod && (
+                    <option value="">Not specified (previous entry)</option>
+                  )}
+                  {OBSERVATION_PERIODS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
           </>
         )}
