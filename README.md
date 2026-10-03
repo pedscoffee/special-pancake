@@ -28,15 +28,18 @@ npm start
 
 ## What's included
 
-- **Family overview:** quick logging, a daily summary, recent care, and individual medicine clocks.
+- **Family overview:** medicine, symptom, and daily check-in actions directly below the child selector, a compact welcome, a daily summary, recent care, and individual medicine clocks.
 - **Child profiles:** independent records, profile colors, optional birthdays, and an explicit edit flow.
 - **Medicine records:** common and custom shortcuts, free-text dosage, an optional instructed interval, backdated entries, and notes. The last recorded dose appears when logging the same medicine.
+- **Medicine favorites:** opt in while saving an entry to keep your own medicine name, dose text, and interval for that child. Favorites open an editable review form, can be updated or removed, and are included in family backups. Removing a favorite keeps care history. Shared care files do not include favorites.
 - **Symptoms:** 17 common shortcuts with distinct icons, search, category filters, and custom observations. Optional details tailored to each symptom include cough sound/frequency, pain location, earache side, rash appearance, dizziness description, temperature method, and scoped vomiting/diarrhea counts. Severity is optional and starts unrecorded.
 - **Daily care:** one form for appetite, fluids, urine, and stool, with one time, observation period, and Save button. Blank sections are skipped. Optional wet/stool diaper counts and stool descriptions stay with their own observations. Individual entries remain editable.
 - **Care history:** text search, inclusive date filters, record-type filters, editing, deletion with immediate undo, and CSV export.
 - **Reports:** an on-screen preview, date/type filters, clipboard copy, text download, and printing or saving as PDF through the browser.
 - **Share care:** a personal message, readable snapshot, and importable care file for the selected child and report filters. Receive care reviews new entries, skips duplicates, and lets you choose between differing versions without replacing family data.
 - **Safe backups:** export all family records; validate v1 or v2 JSON before reviewing and confirming a restore. Unreadable stored records remain untouched.
+- **Protected edits:** saves coordinate across tabs and apply to the latest stored database. A stale edit or deletion cannot replace a newer entry; restore and reset reviews stop if records changed while the review was open. Open logging forms keep their original child when another tab switches profiles.
+- **Unfinished forms:** entry and daily check-in drafts stay in this tab through closing a dialog or reloading. Reopen the same form to review its time and details; Save or Cancel clears its draft. Demo forms do not read or write family drafts. An unfinished edit from an older version of a record is not applied to the newer version.
 - **Private demo:** example records you can explore and change without saving over real family data. Reloading exits the demo.
 - **Offline PWA:** installable icons and manifest, with all production routes and assets cached after the first successful visit.
 - **Accessible interactions:** labeled forms, native focus-trapped dialogs, keyboard navigation, reduced-motion support, and tested text contrast.
@@ -67,6 +70,8 @@ This is a manual handoff, with no accounts, database, or automatic synchronizati
 
 Records stay in browser `localStorage`. There are no accounts, analytics, external fonts, or care-record API calls. The service worker caches only application files. Backups and copied reports are shared only when you choose to share them.
 
+Unfinished forms use this tab's `sessionStorage`; they are not saved care records or included in backups. Draft recovery depends on browser storage and is intended for the same tab, not transfer to another device. Temperature drafts retain their displayed unit. Cross-tab writes use an exclusive IndexedDB transaction for coordination; care records continue to live in `localStorage`.
+
 Browser storage and downloaded backups are not encrypted. Someone with access to this browser profile can access the records. Clearing browser data removes local records; make regular backups. There is no automatic synchronization between devices, no background medical alert service, and no guarantee that a timer will run while the app is closed.
 
 Medicine clocks reflect **the interval you enter**. They do not recommend a dose, determine that a dose is safe, or tell you that medicine is required. Always follow your healthcare provider's care instructions. This app is a personal organization tool, not a medical device or substitute for professional advice.
@@ -88,6 +93,8 @@ npx playwright install chromium
 PLAYWRIGHT_CHANNEL=chromium npm run test:e2e
 ```
 
+The suite also includes mobile WebKit coverage. Install its matching browser with `npx playwright install webkit` before running the full suite. WebKit's offline-navigation test is skipped because of [Playwright's offline emulation bug](https://github.com/microsoft/playwright/issues/42775); Chrome still verifies offline reload, navigation, and logging. WebKit coverage uses the browser engine with an iPhone viewport, not a physical iPhone.
+
 Tests cover desktop and mobile layouts, logging, editing, undo, separate child histories, temperature conversion, report export, sharing fallbacks, care-file validation and merge review, demo isolation, backup validation/restoration, legacy migration, corrupt storage, keyboard dialogs, WCAG AA checks, and offline reload/navigation/logging. Tests use isolated browser contexts and synthetic records; native sharing is mocked and no messages are sent.
 
 ## Deployment and architecture
@@ -95,6 +102,8 @@ Tests cover desktop and mobile layouts, logging, editing, undo, separate child h
 The production build exports the complete app into `out/`. Serve that folder at the root of an HTTPS domain using any static host; no Node server or database is needed in production. Keep Next.js's generated files, route folders, `manifest.webmanifest`, and `sw.js` together. For local testing, `localhost` supports service workers without HTTPS.
 
 Deploy new builds atomically, avoid long-lived caching of HTML and `sw.js`, and allow immutable caching of hashed `_next/static/` assets. The build generates a content-versioned offline cache. New workers wait for old app tabs to close before taking over, and remove old KiddyMeds caches on activation.
+
+After upgrading to this version, close older KiddyMeds tabs and reopen the app so every tab uses the coordinated-save implementation.
 
 - `app/`: App Router pages, metadata, and responsive styles.
 - `components/`: the care provider, dashboard, forms, history, reports, and settings.

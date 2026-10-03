@@ -32,6 +32,7 @@ test("urine records offer all five observations, optional diaper counts and edit
     await dialog.getByRole("button", { name: "Save entry" }).click();
     await expect(dialog).not.toBeVisible();
   }
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const logs = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs,
@@ -53,6 +54,7 @@ test("urine records offer all five observations, optional diaper counts and edit
     .getByLabel("Notes optional")
     .fill("Mixed diaper counted here too");
   await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).not.toBeVisible();
   await page.goto("/reports/");
   await expect(page.locator(".report-text")).toContainText(
     "More than usual · 2 wet diapers · Today so far · Mixed diaper counted here too",
@@ -94,6 +96,7 @@ test("stool counts and descriptions persist, export and handle zero output", asy
     fullPage: false,
   });
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   await page.goto("/history/");
   await page.getByRole("button", { name: /^Edit Stool at/ }).click();
@@ -108,6 +111,7 @@ test("stool counts and descriptions persist, export and handle zero output", asy
     dialog.getByLabel("Number of times", { exact: true }),
   ).toHaveCount(0);
   await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   const downloaded = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export CSV", exact: true }).click();
   const download = await downloaded;
@@ -127,6 +131,7 @@ test("stool counts and descriptions persist, export and handle zero output", asy
   await expect(dialog.getByLabel("Stool description optional")).toBeDisabled();
   await expect(dialog.getByLabel("Stool diapers optional")).toBeDisabled();
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const data = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs.at(-1).data,
@@ -161,6 +166,7 @@ test("switching categories clears irrelevant fields and custom periods need note
   );
   await dialog.getByLabel("Notes optional").fill("Since breakfast");
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const data = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs[0].data,
@@ -208,6 +214,7 @@ test("previous bathroom counts can be edited without inventing a period or diape
   await expect(dialog.getByLabel("Period covered")).toHaveValue("");
   await dialog.getByLabel("Notes optional").fill("Preserved previous count");
   await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const data = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs[0].data,

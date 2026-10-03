@@ -27,7 +27,8 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import type { Child, Log, LogType, View } from "@/lib/types";
+import { assertUnchangedLog } from "@/lib/record-updates";
+import type { Child, Log, LogType, MedicineFavorite, View } from "@/lib/types";
 import {
   childLogs,
   convertTemperature,
@@ -68,12 +69,23 @@ const NAV = [
   { view: "reports", label: "Reports", href: "/reports/", icon: FileText },
 ] as const;
 type Popup =
-  | { kind: "daily-checkin" }
-  | { kind: "entry"; type: LogType; name?: string; log?: Log }
+  | { kind: "daily-checkin"; childId: string }
+  | {
+      kind: "entry";
+      childId: string;
+      type: LogType;
+      name?: string;
+      log?: Log;
+      favorite?: MedicineFavorite;
+    }
   | { kind: "child"; child?: Child }
   | { kind: "delete-log"; log: Log }
-  | { kind: "delete-child"; child: Child };
-export type EntryAction = (type: LogType, name?: string) => void;
+  | { kind: "delete-child"; child: Child; logs: Log[] };
+export type EntryAction = (
+  type: LogType,
+  name?: string,
+  favorite?: MedicineFavorite,
+) => void;
 
 function Brand() {
   return (
@@ -180,20 +192,23 @@ function Garden() {
 
 export function CareApp({ view }: { view: View }) {
   const care = useCare();
-  const { db, ready, now, demo, online, problem, toast, update } = care;
+  const { db, ready, now, demo, online, problem, toast, update, saving } = care;
   const [popup, setPopup] = useState<Popup | null>(null);
   const [undo, setUndo] = useState<Log | null>(null);
   const activeChild =
     db?.children.find((c) => c.id === db.settings.activeChildId) ||
     db?.children[0];
   const logs = db && activeChild ? childLogs(db, activeChild.id) : [];
-  const add: EntryAction = (type, name) =>
+  const add: EntryAction = (type, name, favorite) => {
+    if (!activeChild) return;
     setPopup(
       type === "METRIC" && !name
-        ? { kind: "daily-checkin" }
-        : { kind: "entry", type, name },
+        ? { kind: "daily-checkin", childId: activeChild.id }
+        : { kind: "entry", childId: activeChild.id, type, name, favorite },
     );
-  const edit = (log: Log) => setPopup({ kind: "entry", type: log.type, log });
+  };
+  const edit = (log: Log) =>
+    setPopup({ kind: "entry", childId: log.childId, type: log.type, log });
   const title =
     view === "overview"
       ? "Overview"
@@ -202,32 +217,32 @@ export function CareApp({ view }: { view: View }) {
         : view === "history"
           ? "Care history"
           : view.charAt(0).toUpperCase() + view.slice(1);
-  function deleteEntry(log: Log) {
+  async function deleteEntry(log: Log) {
     if (
-      update(
-        (database) => ({
+      await update((database) => {
+        assertUnchangedLog(database, log);
+        return {
           ...database,
           logs: database.logs.filter((l) => l.id !== log.id),
-        }),
-        "Entry removed.",
-      )
+        };
+      }, "Entry removed.")
     ) {
       setUndo(log);
       setPopup(null);
     }
   }
-  function undoDelete() {
+  async function undoDelete() {
     if (!undo) return;
     if (
-      update(
-        (database) => ({
-          ...database,
-          logs: database.logs.some((l) => l.id === undo.id)
-            ? database.logs
-            : [...database.logs, undo],
-        }),
-        "Entry restored.",
-      )
+      await update((database) => {
+        if (!database.children.some((child) => child.id === undo.childId))
+          throw new Error(
+            "This child profile was removed. The entry couldn’t be restored.",
+          );
+        if (database.logs.some((log) => log.id === undo.id))
+          throw new Error("This entry was already restored in another tab.");
+        return { ...database, logs: [...database.logs, undo] };
+      }, "Entry restored.")
     )
       setUndo(null);
   }
@@ -512,19 +527,20 @@ export function CareApp({ view }: { view: View }) {
       )}
       {popup?.kind === "entry" && activeChild && (
         <EntryForm
-          key={popup.log?.id || `${popup.type}-${popup.name}`}
+          key={`${popup.childId}:${popup.log?.id || `${popup.type}-${popup.name}`}`}
           kind={popup.type}
           name={popup.name}
+          favorite={popup.favorite}
           log={popup.log}
-          childId={popup.log?.childId || activeChild.id}
+          childId={popup.childId}
           onClose={() => setPopup(null)}
           onDelete={(log) => setPopup({ kind: "delete-log", log })}
         />
       )}
       {popup?.kind === "daily-checkin" && activeChild && (
         <DailyCheckInForm
-          key={activeChild.id}
-          childId={activeChild.id}
+          key={popup.childId}
+          childId={popup.childId}
           onClose={() => setPopup(null)}
         />
       )}
@@ -532,21 +548,34 @@ export function CareApp({ view }: { view: View }) {
         <ChildForm
           child={popup.child}
           onClose={() => setPopup(null)}
-          onDelete={(child) => setPopup({ kind: "delete-child", child })}
+          onDelete={(child) =>
+            setPopup({
+              kind: "delete-child",
+              child,
+              logs: db!.logs.filter((log) => log.childId === child.id),
+            })
+          }
         />
       )}
       {popup?.kind === "delete-log" && (
         <Modal
           title="Remove this entry?"
           subtitle="You can undo this immediately after removing it."
-          onClose={() => setPopup(null)}
+          onClose={() => {
+            if (!saving) setPopup(null);
+          }}
         >
           <div className="modal-actions">
-            <button className="button secondary" onClick={() => setPopup(null)}>
+            <button
+              className="button secondary"
+              disabled={saving}
+              onClick={() => setPopup(null)}
+            >
               Keep entry
             </button>
             <button
               className="button danger"
+              disabled={saving}
               onClick={() => deleteEntry(popup.log)}
             >
               Remove entry
@@ -558,24 +587,53 @@ export function CareApp({ view }: { view: View }) {
         <Modal
           title={`Remove ${popup.child.name}?`}
           subtitle={`This removes their profile and all ${db?.logs.filter((l) => l.childId === popup.child.id).length || 0} care records. Export a backup in Settings first if you’d like to keep them.`}
-          onClose={() => setPopup(null)}
+          onClose={() => {
+            if (!saving) setPopup(null);
+          }}
         >
           <div className="modal-actions">
-            <button className="button secondary" onClick={() => setPopup(null)}>
+            <button
+              className="button secondary"
+              disabled={saving}
+              onClick={() => setPopup(null)}
+            >
               Keep profile
             </button>
             <button
               className="button danger"
-              onClick={() => {
+              disabled={saving}
+              onClick={async () => {
                 if (
-                  update((database) => {
-                    if (database.children.length < 2) return database;
+                  await update((database) => {
+                    if (database.children.length < 2)
+                      throw new Error("Keep at least one child profile.");
+                    const latest = database.children.find(
+                      (child) => child.id === popup.child.id,
+                    );
+                    const originalLogs = popup.logs;
+                    if (
+                      !latest ||
+                      latest.name !== popup.child.name ||
+                      latest.color !== popup.child.color ||
+                      latest.birthday !== popup.child.birthday ||
+                      JSON.stringify(
+                        database.logs.filter(
+                          (log) => log.childId === popup.child.id,
+                        ),
+                      ) !== JSON.stringify(originalLogs)
+                    )
+                      throw new Error(
+                        "This child’s records changed in another tab. Cancel and review them before removing the profile.",
+                      );
                     const children = database.children.filter(
                       (c) => c.id !== popup.child.id,
                     );
                     return {
                       ...database,
                       children,
+                      medicineFavorites: database.medicineFavorites?.filter(
+                        (item) => item.childId !== popup.child.id,
+                      ),
                       logs: database.logs.filter(
                         (l) => l.childId !== popup.child.id,
                       ),
@@ -628,6 +686,49 @@ function Overview({
     : null;
   return (
     <>
+      <div
+        className="overview-actions"
+        role="group"
+        aria-label={`Log care for ${child.name}`}
+      >
+        <button
+          className="quick-action"
+          aria-label="Log a medicine"
+          onClick={() => add("MEDICINE")}
+        >
+          <IconBox icon={Pill} small />
+          <span>
+            <strong>Medicine</strong>
+            <small>Record a dose</small>
+          </span>
+          <Plus size={17} />
+        </button>
+        <button
+          className="quick-action"
+          aria-label="Symptom The little things you notice"
+          onClick={() => add("SYMPTOM")}
+        >
+          <IconBox icon={Thermometer} color="peach" small />
+          <span>
+            <strong>Symptom</strong>
+            <small>What you notice</small>
+          </span>
+          <Plus size={17} />
+        </button>
+        <button
+          className="quick-action"
+          aria-label="Daily check-in Meals, fluids & bathroom"
+          onClick={() => add("METRIC")}
+        >
+          <IconBox icon={Droplets} color="mint" small />
+          <span>
+            <strong>Daily check-in</strong>
+            <small>Meals, fluids & bathroom</small>
+          </span>
+          <Plus size={17} />
+        </button>
+      </div>
+      <MedicineFavorites add={add} compact />
       <div className="welcome-card">
         <div>
           <span className="welcome-tag">
@@ -643,10 +744,6 @@ function Overview({
             <br />
             You take care of them. We’ll help with the remembering.
           </p>
-          <button className="button primary" onClick={() => add("MEDICINE")}>
-            <Plus size={17} />
-            Log a medicine
-          </button>
         </div>
         <Garden />
       </div>
@@ -732,36 +829,6 @@ function Overview({
           </section>
         </div>
         <aside className="dashboard-aside">
-          <section className="card quick-log">
-            <SectionHeading title="A quick little log" />
-            <p className="section-description">
-              What would you like to remember?
-            </p>
-            <button className="quick-action" onClick={() => add("MEDICINE")}>
-              <IconBox icon={Pill} small />
-              <span>
-                <strong>Medicine</strong>
-                <small>A dose, remembered</small>
-              </span>
-              <Plus size={17} />
-            </button>
-            <button className="quick-action" onClick={() => add("SYMPTOM")}>
-              <IconBox icon={Thermometer} color="peach" small />
-              <span>
-                <strong>Symptom</strong>
-                <small>The little things you notice</small>
-              </span>
-              <Plus size={17} />
-            </button>
-            <button className="quick-action" onClick={() => add("METRIC")}>
-              <IconBox icon={Droplets} color="mint" small />
-              <span>
-                <strong>Daily check-in</strong>
-                <small>Meals, fluids & bathroom</small>
-              </span>
-              <Plus size={17} />
-            </button>
-          </section>
           <DailyChecks logs={logs} add={add} compact />
           <div className="gentle-note">
             <span className="gentle-heart">
@@ -901,6 +968,75 @@ export function TimerPanel({ logs }: { logs: Log[] }) {
   );
 }
 
+function MedicineFavorites({
+  add,
+  compact = false,
+}: {
+  add: EntryAction;
+  compact?: boolean;
+}) {
+  const { db, update, saving } = useCare();
+  const child =
+    db?.children.find((item) => item.id === db.settings.activeChildId) ||
+    db?.children[0];
+  const favorites = (db?.medicineFavorites || []).filter(
+    (item) => item.childId === child?.id,
+  );
+  if (!favorites.length)
+    return compact ? null : (
+      <p className="field-hint favorites-hint">
+        Save a favorite when logging a medicine to reuse your own recorded
+        details for {child?.name}.
+      </p>
+    );
+  return (
+    <section
+      className="card medicine-favorites"
+      aria-label={`Medicine favorites for ${child?.name}`}
+    >
+      <SectionHeading title={`Favorites for ${child?.name}`} />
+      {!compact && (
+        <p className="section-description">
+          Your saved details. Open a favorite to review before recording a dose.
+        </p>
+      )}
+      <div className="favorite-buttons">
+        {favorites.map((favorite) => (
+          <div className="favorite-item" key={favorite.id}>
+            <button
+              className="button secondary"
+              onClick={() => add("MEDICINE", favorite.name, favorite)}
+            >
+              <Pill size={16} />
+              {favorite.name}
+            </button>
+            {!compact && (
+              <button
+                className="icon-button"
+                aria-label={`Remove ${favorite.name} favorite`}
+                disabled={saving}
+                onClick={() =>
+                  update(
+                    (current) => ({
+                      ...current,
+                      medicineFavorites: (
+                        current.medicineFavorites || []
+                      ).filter((item) => item.id !== favorite.id),
+                    }),
+                    "Favorite removed. Care records kept.",
+                  )
+                }
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MedicinesView({
   logs,
   add,
@@ -933,6 +1069,7 @@ function MedicinesView({
           Log medicine
         </button>
       </div>
+      <MedicineFavorites add={add} />
       <div className="medicine-grid">
         {(showAll ? all : all.slice(0, 4)).map((m) => (
           <div className="medicine-tile" key={m.name}>

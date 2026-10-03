@@ -7,6 +7,13 @@ export type Child = {
   color: string;
   birthday?: string;
 };
+export type MedicineFavorite = {
+  id: string;
+  childId: string;
+  name: string;
+  dosage: string;
+  frequencyHours: number | null;
+};
 export type LogType = "MEDICINE" | "SYMPTOM" | "METRIC";
 export type Log = {
   id: string;
@@ -38,6 +45,7 @@ export type Database = {
   version: 2;
   children: Child[];
   customMedicines: string[];
+  medicineFavorites?: MedicineFavorite[];
   logs: Log[];
   settings: {
     timeFormat: "12h" | "24h";

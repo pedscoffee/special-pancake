@@ -15,12 +15,12 @@ export function ChildForm({
   onClose: () => void;
   onDelete: (child: Child) => void;
 }) {
-  const { db, update, now } = useCare();
+  const { db, update, now, saving } = useCare();
   const [color, setColor] = useState(
     child?.color || COLORS[(db?.children.length || 0) % COLORS.length],
   );
   const [error, setError] = useState("");
-  function save(e: FormEvent<HTMLFormElement>) {
+  async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const name = String(form.get("name") || "").trim();
@@ -35,14 +35,30 @@ export function ChildForm({
       birthday: String(form.get("birthday") || "") || undefined,
     };
     if (
-      update(
-        (database) => ({
-          ...database,
-          children: child
-            ? database.children.map((c) => (c.id === child.id ? profile : c))
-            : [...database.children, profile],
-          settings: { ...database.settings, activeChildId: profile.id },
-        }),
+      await update(
+        (database) => {
+          if (child) {
+            const latest = database.children.find(
+              (item) => item.id === child.id,
+            );
+            if (
+              !latest ||
+              latest.name !== child.name ||
+              latest.color !== child.color ||
+              latest.birthday !== child.birthday
+            )
+              throw new Error(
+                "This profile changed in another tab. Reopen it before saving changes.",
+              );
+          }
+          return {
+            ...database,
+            children: child
+              ? database.children.map((c) => (c.id === child.id ? profile : c))
+              : [...database.children, profile],
+            settings: { ...database.settings, activeChildId: profile.id },
+          };
+        },
         child ? "Profile updated." : `${name} is part of the family.`,
       )
     )
@@ -52,7 +68,9 @@ export function ChildForm({
     <Modal
       title={child ? "Edit child profile" : "Add a little one"}
       subtitle="Their own space. Their own care story."
-      onClose={onClose}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
     >
       <form className="form-stack" onSubmit={save}>
         <label>
@@ -105,6 +123,7 @@ export function ChildForm({
             <button
               className="button danger-ghost"
               type="button"
+              disabled={saving}
               onClick={() => onDelete(child)}
             >
               <Trash2 size={16} />
@@ -114,12 +133,13 @@ export function ChildForm({
             <button
               className="button secondary"
               type="button"
+              disabled={saving}
               onClick={onClose}
             >
               Cancel
             </button>
           )}
-          <button className="button primary" type="submit">
+          <button className="button primary" type="submit" disabled={saving}>
             {child ? <Check size={17} /> : <Plus size={17} />}
             {child ? "Save profile" : "Add child"}
           </button>

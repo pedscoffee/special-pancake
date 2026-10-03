@@ -495,7 +495,64 @@ svg {
   overflow: hidden;
   display: flex;
   align-items: center;
-  min-height: 221px;
+  min-height: 170px;
+}
+.overview-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.overview-actions .quick-action {
+  margin: 0;
+  padding: 14px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.favorite-picker {
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.favorite-picker legend {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.favorite-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.favorite-item {
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+}
+.favorite-buttons .button {
+  overflow-wrap: anywhere;
+  text-align: left;
+  max-width: 100%;
+}
+.medicine-favorites {
+  margin-bottom: 18px;
+}
+.favorites-hint {
+  margin-bottom: 18px;
+}
+.favorite-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.favorite-checkbox input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--sage);
 }
 .welcome-card > div {
   position: relative;
@@ -2375,23 +2432,48 @@ textarea {
     height: 16px;
   }
   .welcome-card {
-    padding: 24px 21px;
-    min-height: 245px;
+    padding: 17px 18px;
+    min-height: 125px;
   }
   .welcome-card h2 {
-    max-width: 240px;
-    font-size: 23px;
+    max-width: 230px;
+    font-size: 20px;
   }
   .welcome-card p {
     max-width: 210px;
     font-size: 11px;
+    margin-bottom: 0;
+  }
+  .welcome-card .welcome-tag {
+    display: none;
+  }
+  .overview-actions {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .overview-actions .quick-action {
+    flex-direction: column;
+    gap: 8px;
+    padding: 13px 4px;
+    text-align: center;
+    min-height: 93px;
+  }
+  .overview-actions .quick-action > span:nth-child(2) {
+    flex: none;
+  }
+  .overview-actions .quick-action strong {
+    font-size: 12px;
+  }
+  .overview-actions .quick-action small,
+  .overview-actions .quick-action > svg {
+    display: none;
   }
   .garden {
-    width: 140px;
+    width: 100px;
     bottom: -5px;
     right: -9px;
-    height: 145px;
-    opacity: 0.9;
+    height: 100px;
+    opacity: 0.65;
   }
   .welcome-tag {
     font-size: 8px;

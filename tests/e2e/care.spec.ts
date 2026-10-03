@@ -37,6 +37,7 @@ test("care entries persist, edit correctly, and can be removed with undo", async
     .getByLabel("Dose optional")
     .fill("Updated recorded dose");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(
     page.getByRole("button", { name: /^Edit Tylenol at/ }),
   ).toContainText("Updated recorded dose");
@@ -89,6 +90,7 @@ test("temperature preferences convert past readings without changing their sourc
     .fill("Fever");
   await page.getByLabel("Temperature (°F) optional").fill("100.4");
   await page.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await openSettings(page);
   await page.getByRole("button", { name: "°C", exact: true }).click();
   await page.goto("/");
@@ -105,6 +107,7 @@ test("temperature preferences convert past readings without changing their sourc
   await page.getByRole("button", { name: /^Edit Fever at/ }).click();
   await page.getByLabel("Notes optional").fill("Updated notes, same reading");
   await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   const edited = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs[0],
   );
@@ -123,6 +126,7 @@ test("daily check-ins, history search, and reports include care notes", async ({
     .selectOption("Usual amount");
   await page.getByLabel("Notes optional").fill("Water at breakfast");
   await page.getByRole("button", { name: "Save check-in" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.goto("/history/");
   await page
     .getByRole("textbox", { name: "Search care history" })
@@ -308,7 +312,12 @@ test("responsive pages fit the viewport and dialogs close with Escape", async ({
 test("offline reload, navigation, and recording work after the initial cache", async ({
   page,
   context,
+  browserName,
 }) => {
+  test.skip(
+    browserName === "webkit",
+    "Playwright WebKit offline navigation bug: https://github.com/microsoft/playwright/issues/42775",
+  );
   await start(page);
   await logMedicine(page);
   await page.evaluate(async () => {
@@ -335,6 +344,7 @@ test("offline reload, navigation, and recording work after the initial cache", a
   await page.getByRole("button", { name: "Fever", exact: true }).click();
   await page.getByLabel("Temperature (°F) optional").fill("100.0");
   await page.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("button", { name: /^Edit Fever at/ }),

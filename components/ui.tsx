@@ -46,6 +46,7 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
+  const { saving } = useCare();
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.showModal();
@@ -62,10 +63,10 @@ export function Modal({
       aria-labelledby={id}
       onCancel={(e) => {
         e.preventDefault();
-        onClose();
+        if (!saving) onClose();
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (!saving && e.target === e.currentTarget) onClose();
       }}
       className={`modal ${className}`.trim()}
     >
@@ -77,6 +78,7 @@ export function Modal({
           </div>
           <button
             className="icon-button"
+            disabled={saving}
             onClick={onClose}
             aria-label="Close dialog"
           >

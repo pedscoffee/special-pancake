@@ -8,20 +8,31 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:3000",
-    channel: process.env.PLAYWRIGHT_CHANNEL || "chrome",
     trace: "retain-on-failure",
   },
   projects: [
     {
+      name: "webkit-mobile",
+      use: {
+        ...devices["iPhone 13"],
+        browserName: "webkit",
+      },
+    },
+    {
       name: "desktop",
       use: {
         ...devices["Desktop Chrome"],
+        channel: process.env.PLAYWRIGHT_CHANNEL || "chrome",
         viewport: { width: 1440, height: 1050 },
       },
     },
     {
       name: "mobile",
-      use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
+      use: {
+        ...devices["iPhone 13"],
+        defaultBrowserType: "chromium",
+        channel: process.env.PLAYWRIGHT_CHANNEL || "chrome",
+      },
     },
   ],
   webServer: {

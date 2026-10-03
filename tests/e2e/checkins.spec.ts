@@ -81,6 +81,7 @@ test("a full daily check-in saves four sections together and remains individuall
     .getByLabel("Notes optional")
     .fill("Small sips at lunch");
   await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.goto("/reports/");
   await expect(page.locator(".report-text")).toContainText(
     "Only small sips or short feeds · Today so far · Small sips at lunch",
@@ -104,6 +105,7 @@ test("blank sections are skipped, zero output is explicit, and another check-in 
   await dialog.getByLabel("Bowel movements", { exact: true }).fill("0");
   await expect(dialog.getByLabel("Stool description optional")).toBeDisabled();
   await dialog.getByRole("button", { name: "Save check-in" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   const logs = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs,
   );
@@ -190,11 +192,13 @@ test("specific observations and scoped symptom counts survive editing and report
     path: `docs/previews/observations-${info.project.name}.png`,
   });
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("button", { name: "Vomiting", exact: true }).click();
   await dialog.getByLabel("Vomiting episodes optional").fill("2");
   await dialog.getByLabel("Count covers").selectOption("Today so far");
   await dialog.getByLabel("Keeping fluids down? optional").selectOption("Some");
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: /^Edit Vomiting at/ }).click();
   await expect(dialog.getByLabel("Vomiting episodes optional")).toHaveValue(
@@ -202,6 +206,7 @@ test("specific observations and scoped symptom counts survive editing and report
   );
   await expect(dialog.getByLabel("Count covers")).toHaveValue("Today so far");
   await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("button", { name: /^Edit Cough at/ }).click();
   await expect(dialog.getByLabel("Cough sound optional")).toHaveValue(
     "Wet or mucusy",
@@ -230,6 +235,7 @@ test("changing a symptom clears unrelated details and retains an explicitly chos
   await dialog.getByLabel("Which ear? optional").selectOption("Left");
   await dialog.getByLabel("Severity optional").selectOption("Moderate");
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("button", { name: /^Edit Earache at/ }).click();
   await dialog.getByLabel("Symptom", { exact: true }).fill("Dizziness");
   await expect(dialog.getByLabel("Which ear? optional")).toHaveCount(0);
@@ -237,6 +243,7 @@ test("changing a symptom clears unrelated details and retains an explicitly chos
     .getByLabel("How do they describe it? optional")
     .selectOption("Spinning");
   await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const stored = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs[0].data,

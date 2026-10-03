@@ -23,13 +23,17 @@ import {
   OBSERVATION_PERIODS,
   SYMPTOMS,
 } from "@/lib/care";
-import type { Log, LogType } from "@/lib/types";
+import { recordSignature } from "@/lib/sharing";
+import { saveCareRecord, saveMedicineFavorite } from "@/lib/record-updates";
+import { useFormDraft } from "./use-form-draft";
+import type { Log, LogType, MedicineFavorite } from "@/lib/types";
 
 export function EntryForm({
   kind,
   name = "",
   log,
   childId,
+  favorite,
   onClose,
   onDelete,
 }: {
@@ -37,31 +41,74 @@ export function EntryForm({
   name?: string;
   log?: Log;
   childId: string;
+  favorite?: MedicineFavorite;
   onClose: () => void;
   onDelete: (log: Log) => void;
 }) {
-  const { db, update, now } = useCare();
+  const { db, update, now, demo, saving } = useCare();
+  const {
+    formRef,
+    initial: draftInitial,
+    stale: staleDraft,
+    capture: captureDraft,
+    clear: clearDraft,
+  } = useFormDraft(
+    `${childId}:entry:${log?.id || `${kind}:${name}`}`,
+    !demo,
+    log ? recordSignature(log) : "new",
+  );
+  const [dose, setDose] = useState(
+    draftInitial?.dosage ?? favorite?.dosage ?? log?.data.dosage ?? "",
+  );
+  const [formTempUnit] = useState(
+    draftInitial?.tempUnit === "C" || draftInitial?.tempUnit === "F"
+      ? draftInitial.tempUnit
+      : db?.settings.tempUnit || "F",
+  );
+  const [frequency, setFrequency] = useState(
+    draftInitial?.frequency ??
+      String(favorite?.frequencyHours ?? log?.data.frequencyHours ?? ""),
+  );
+  const [loadedFavorite, setLoadedFavorite] = useState(
+    !!favorite && !draftInitial,
+  );
+  const [keepFavorite, setKeepFavorite] = useState(
+    draftInitial?.keepFavorite === "true",
+  );
   const [entryName, setEntryName] = useState(
-    log
-      ? log.data.medicineName ||
+    draftInitial?.entryName ??
+      (log
+        ? log.data.medicineName ||
           log.data.symptomName ||
           log.data.metricType ||
           ""
-      : name,
+        : favorite?.name || name),
   );
-  const [time, setTime] = useState(() => localInput(log?.timeGiven));
+  const [time, setTime] = useState(
+    () => draftInitial?.time ?? localInput(log?.timeGiven),
+  );
   const [error, setError] = useState("");
   const [metricValue, setMetricValue] = useState(
-    log?.data.value && !/^\d+/.test(log.data.value)
-      ? log.data.value
-      : log?.data.value
-        ? "Count"
-        : kind === "METRIC" && name === "urine"
-          ? ""
-          : "",
+    draftInitial?.metricValue ??
+      (log?.data.value && !/^\d+/.test(log.data.value)
+        ? log.data.value
+        : log?.data.value
+          ? "Count"
+          : kind === "METRIC" && name === "urine"
+            ? ""
+            : ""),
   );
   if (!db) return null;
-  const child = db.children.find((c) => c.id === childId)!;
+  const child = db.children.find((c) => c.id === childId);
+  if (!child)
+    return (
+      <Modal title="Child profile removed" onClose={onClose}>
+        <p>
+          This profile was removed in another tab. This form cannot be saved;
+          its unfinished draft remains in this tab.
+        </p>
+      </Modal>
+    );
   const typeName =
     kind === "MEDICINE"
       ? "medicine"
@@ -79,11 +126,11 @@ export function EntryForm({
     ? convertTemperature(
         log.data.temp,
         log.data.tempUnit || db.settings.tempUnit,
-        db.settings.tempUnit,
+        formTempUnit,
       )
     : "";
 
-  function save(e: FormEvent<HTMLFormElement>) {
+  async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const title = entryName.trim();
@@ -121,7 +168,7 @@ export function EntryForm({
         data.temp = unchanged ? log!.data.temp : temperature;
         data.tempUnit = unchanged
           ? log!.data.tempUnit || db!.settings.tempUnit
-          : db!.settings.tempUnit;
+          : formTempUnit;
       } else {
         const severity = String(form.get("severity") || "");
         if (severity) data.severity = severity;
@@ -195,37 +242,99 @@ export function EntryForm({
       timestamp: log?.timestamp || Date.now(),
       data,
     };
-    const saved = update(
-      (database) => ({
-        ...database,
-        logs: log
-          ? database.logs.map((l) => (l.id === log.id ? entry : l))
-          : [...database.logs, entry],
-        customMedicines:
-          kind === "MEDICINE" &&
-          ![...MEDICINES.map((m) => m.name), ...database.customMedicines].some(
-            (m) => m.toLowerCase() === title.toLowerCase(),
-          )
-            ? [...database.customMedicines, title]
-            : database.customMedicines,
-      }),
+    const saved = await update(
+      (database) => {
+        let next = saveCareRecord(database, entry, log);
+        if (kind === "MEDICINE" && keepFavorite)
+          next = saveMedicineFavorite(next, {
+            id: crypto.randomUUID(),
+            childId,
+            name: title,
+            dosage: data.dosage || "",
+            frequencyHours: data.frequencyHours || null,
+          });
+        return {
+          ...next,
+          customMedicines:
+            kind === "MEDICINE" &&
+            ![
+              ...MEDICINES.map((m) => m.name),
+              ...database.customMedicines,
+            ].some((m) => m.toLowerCase() === title.toLowerCase())
+              ? [...database.customMedicines, title]
+              : database.customMedicines,
+        };
+      },
       log
         ? "Entry updated."
-        : `${kind === "METRIC" ? metric.name : title} recorded for ${child.name}.`,
+        : `${kind === "METRIC" ? metric.name : title} recorded for ${child!.name}.`,
     );
-    if (saved) onClose();
+    if (saved) {
+      clearDraft();
+      onClose();
+    }
   }
   return (
     <Modal
       title={`${log ? "Edit" : "Log"} ${typeName}`}
       subtitle={`A little care for ${child.name}.`}
-      onClose={onClose}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
     >
-      <form onSubmit={save} className="form-stack">
+      <form
+        ref={formRef}
+        onChange={captureDraft}
+        onSubmit={save}
+        className="form-stack"
+      >
+        {staleDraft && (
+          <p className="inline-note">
+            An unfinished edit belongs to an older version of this entry. The
+            latest saved details are shown.
+          </p>
+        )}
+        {draftInitial && (
+          <p className="inline-note">
+            Your unfinished entry is restored. Review the time and details
+            before saving.
+          </p>
+        )}
+        {kind === "MEDICINE" &&
+          !log &&
+          (db.medicineFavorites || []).some(
+            (item) => item.childId === childId,
+          ) && (
+            <fieldset className="favorite-picker">
+              <legend>Favorites for {child.name}</legend>
+              <div className="favorite-buttons">
+                {(db.medicineFavorites || [])
+                  .filter((item) => item.childId === childId)
+                  .map((item) => (
+                    <button
+                      type="button"
+                      className="button secondary"
+                      key={item.id}
+                      onClick={() => {
+                        captureDraft();
+                        setEntryName(item.name);
+                        setDose(item.dosage);
+                        setFrequency(String(item.frequencyHours ?? ""));
+                        setLoadedFavorite(true);
+                        setKeepFavorite(false);
+                      }}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+              </div>
+            </fieldset>
+          )}
         {kind === "METRIC" ? (
           <label>
             Daily check-in
             <select
+              name="entryName"
               value={entryName}
               onChange={(e) => {
                 setEntryName(e.target.value);
@@ -244,12 +353,20 @@ export function EntryForm({
           <label>
             {kind === "MEDICINE" ? "Medicine name" : "Symptom"}
             <input
+              name="entryName"
               autoFocus
               required
               maxLength={100}
               list={kind === "SYMPTOM" ? "symptom-presets" : undefined}
               value={entryName}
-              onChange={(e) => setEntryName(e.target.value)}
+              onChange={(e) => {
+                setEntryName(e.target.value);
+                if (loadedFavorite) {
+                  setDose("");
+                  setFrequency("");
+                  setLoadedFavorite(false);
+                }
+              }}
               placeholder={kind === "MEDICINE" ? "e.g. Tylenol" : "e.g. Cough"}
             />
           </label>
@@ -263,6 +380,12 @@ export function EntryForm({
         )}
         {kind === "MEDICINE" && (
           <>
+            {loadedFavorite && (
+              <p className="inline-note">
+                Favorite details loaded. Review the dose and interval against
+                your current care instructions.
+              </p>
+            )}
             {recent && (
               <div className="inline-note">
                 <Clock3 size={17} />
@@ -283,7 +406,8 @@ export function EntryForm({
                 Dose <span className="optional">optional</span>
                 <input
                   name="dosage"
-                  defaultValue={log?.data.dosage}
+                  value={dose}
+                  onChange={(e) => setDose(e.target.value)}
                   maxLength={200}
                   placeholder="As instructed, e.g. 5 mL"
                 />
@@ -296,11 +420,21 @@ export function EntryForm({
                   min="0.01"
                   max="8760"
                   step="any"
-                  defaultValue={log?.data.frequencyHours || ""}
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value)}
                   placeholder="e.g. 6"
                 />
               </label>
             </div>
+            <label className="favorite-checkbox">
+              <input
+                type="checkbox"
+                name="keepFavorite"
+                checked={keepFavorite}
+                onChange={(e) => setKeepFavorite(e.target.checked)}
+              />
+              Save these details as a favorite for {child.name}
+            </label>
             <p className="field-hint">
               Use the dose and interval in your healthcare provider’s
               instructions. We’ll show a clock for the interval you record.
@@ -309,18 +443,17 @@ export function EntryForm({
         )}
         {kind === "SYMPTOM" && entryName.trim().toLowerCase() === "fever" && (
           <label>
-            Temperature (°{db.settings.tempUnit}){" "}
+            <input type="hidden" name="tempUnit" value={formTempUnit} />
+            Temperature (°{formTempUnit}){" "}
             <span className="optional">optional</span>
             <input
               name="temperature"
               type="number"
               step="0.1"
-              min={db.settings.tempUnit === "F" ? 70 : 20}
-              max={db.settings.tempUnit === "F" ? 120 : 50}
+              min={formTempUnit === "F" ? 70 : 20}
+              max={formTempUnit === "F" ? 120 : 50}
               defaultValue={tempInitial}
-              placeholder={
-                db.settings.tempUnit === "F" ? "e.g. 100.4" : "e.g. 38.0"
-              }
+              placeholder={formTempUnit === "F" ? "e.g. 100.4" : "e.g. 38.0"}
             />
           </label>
         )}
@@ -352,6 +485,7 @@ export function EntryForm({
               <label>
                 {metric.question}
                 <select
+                  name="metricValue"
                   value={metricValue}
                   required
                   onChange={(e) => setMetricValue(e.target.value)}
@@ -435,6 +569,8 @@ export function EntryForm({
             ))}
           </div>
           <input
+            name="time"
+            aria-label="When"
             type="datetime-local"
             value={time}
             onChange={(e) => setTime(e.target.value)}
@@ -472,6 +608,7 @@ export function EntryForm({
             <button
               className="button danger-ghost"
               type="button"
+              disabled={saving}
               onClick={() => onDelete(log)}
             >
               <Trash2 size={16} />
@@ -481,12 +618,16 @@ export function EntryForm({
             <button
               className="button secondary"
               type="button"
-              onClick={onClose}
+              disabled={saving}
+              onClick={() => {
+                clearDraft();
+                onClose();
+              }}
             >
               Cancel
             </button>
           )}
-          <button className="button primary" type="submit">
+          <button className="button primary" type="submit" disabled={saving}>
             {log ? <Check size={17} /> : <Plus size={17} />}
             {log ? "Save changes" : "Save entry"}
           </button>

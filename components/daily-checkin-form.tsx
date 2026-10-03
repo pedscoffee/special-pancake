@@ -7,6 +7,7 @@ import { Modal } from "./ui";
 import { BathroomFields } from "./bathroom-fields";
 import { localInput, METRICS, OBSERVATION_PERIODS } from "@/lib/care";
 import { addDailyCheckIn, buildDailyCheckIn } from "@/lib/daily-checkin";
+import { useFormDraft } from "./use-form-draft";
 import type { Log } from "@/lib/types";
 
 export function DailyCheckInForm({
@@ -16,14 +17,28 @@ export function DailyCheckInForm({
   childId: string;
   onClose: () => void;
 }) {
-  const { db, update, now } = useCare();
-  const [time, setTime] = useState(() => localInput());
-  const [urine, setUrine] = useState("");
+  const { db, update, now, demo, saving } = useCare();
+  const {
+    formRef,
+    initial: draftInitial,
+    capture: captureDraft,
+    clear: clearDraft,
+  } = useFormDraft(`${childId}:daily-checkin`, !demo);
+  const [time, setTime] = useState(() => draftInitial?.time ?? localInput());
+  const [urine, setUrine] = useState(draftInitial?.urine ?? "");
   const [error, setError] = useState("");
   if (!db) return null;
   const child = db.children.find((c) => c.id === childId);
-  if (!child) return null;
-  function save(e: FormEvent<HTMLFormElement>) {
+  if (!child)
+    return (
+      <Modal title="Child profile removed" onClose={onClose}>
+        <p>
+          This profile was removed in another tab. This check-in cannot be
+          saved; its unfinished draft remains in this tab.
+        </p>
+      </Modal>
+    );
+  async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const text = (key: string) => String(form.get(key) || "").trim();
@@ -44,7 +59,7 @@ export function DailyCheckInForm({
         stoolConsistency: text("stool-stoolConsistency") || undefined,
       });
       let mergeError = "";
-      const saved = update((current) => {
+      const saved = await update((current) => {
         try {
           return addDailyCheckIn(current, records);
         } catch (err) {
@@ -55,8 +70,10 @@ export function DailyCheckInForm({
           return null;
         }
       }, `Daily check-in saved for ${child!.name}.`);
-      if (saved) onClose();
-      else
+      if (saved) {
+        clearDraft();
+        onClose();
+      } else
         setError(
           mergeError ||
             "This check-in couldn’t be saved. Your previous records are unchanged.",
@@ -71,10 +88,23 @@ export function DailyCheckInForm({
     <Modal
       title="Daily check-in"
       subtitle={`How is ${child.name}’s day going?`}
-      onClose={onClose}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
       className="checkin-modal"
     >
-      <form className="form-stack daily-checkin-form" onSubmit={save}>
+      <form
+        ref={formRef}
+        onChange={captureDraft}
+        className="form-stack daily-checkin-form"
+        onSubmit={save}
+      >
+        {draftInitial && (
+          <p className="inline-note">
+            Your unfinished check-in is restored. Review the time and
+            observations before saving.
+          </p>
+        )}
         <p className="field-hint">
           Fill in what you know and save it all together. Blank sections stay
           unrecorded; no previous answers are carried forward.
@@ -83,6 +113,7 @@ export function DailyCheckInForm({
           <label>
             When
             <input
+              name="time"
               type="datetime-local"
               value={time}
               onChange={(e) => setTime(e.target.value)}
@@ -175,10 +206,18 @@ export function DailyCheckInForm({
           </p>
         )}
         <div className="modal-actions">
-          <button type="button" className="button secondary" onClick={onClose}>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={saving}
+            onClick={() => {
+              clearDraft();
+              onClose();
+            }}
+          >
             Cancel
           </button>
-          <button type="submit" className="button primary">
+          <button type="submit" className="button primary" disabled={saving}>
             <Check size={17} />
             Save check-in
           </button>

@@ -37,6 +37,7 @@ test("every symptom has a distinct icon shared by observations, overview and his
         .getByPlaceholder("Where does it hurt? Anything else you noticed…")
         .fill("Left knee after playing");
     await dialog.getByRole("button", { name: "Save entry" }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
     const record = page.getByRole("button", {
       name: new RegExp(`^Edit ${preset.name} at`),
     });
@@ -44,6 +45,7 @@ test("every symptom has a distinct icon shared by observations, overview and his
     expect(await record.locator(".icon-box svg").innerHTML()).toBe(svg);
   }
   expect(icons.size).toBe(SYMPTOM_PRESETS.length - 1);
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const rows = await page.evaluate(
     () => JSON.parse(localStorage.getItem("kiddymeds_db_v2")!).logs,
@@ -108,6 +110,7 @@ test("symptom filters support synonyms and unmatched observations can still be r
     "My own observation",
   );
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const record = page.getByRole("button", {
     name: /^Edit My own observation at/,
@@ -117,6 +120,7 @@ test("symptom filters support synonyms and unmatched observations can still be r
   await page.getByRole("button", { name: "Log symptom", exact: true }).click();
   await dialog.getByLabel("Symptom", { exact: true }).fill("  ear PAIN  ");
   await dialog.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.reload();
   const ear = page.getByRole("button", { name: /^Edit ear PAIN at/ });
   await expect(ear.locator(".lucide-ear")).toHaveCount(1);

@@ -500,6 +500,8 @@ export function SettingsView({
     db,
     update,
     restore,
+    revision,
+    saving,
     notify,
     now,
     problem,
@@ -507,6 +509,7 @@ export function SettingsView({
     startDemo,
     endDemo,
   } = useCare();
+  const reviewRevision = useRef<string | null>(null);
   const [pending, setPending] = useState<Database | null>(null);
   const [reset, setReset] = useState(false);
   const [importError, setImportError] = useState("");
@@ -541,6 +544,7 @@ export function SettingsView({
         throw new Error(
           "This is a shared care file. Use Receive care to add it without replacing your records.",
         );
+      reviewRevision.current = revision;
       setPending(parseDatabase(JSON.parse(text)));
     } catch (err) {
       setImportError(
@@ -732,7 +736,10 @@ export function SettingsView({
             </div>
             <button
               className="button danger-ghost"
-              onClick={() => setReset(true)}
+              onClick={() => {
+                reviewRevision.current = revision;
+                setReset(true);
+              }}
             >
               Reset data
             </button>
@@ -812,14 +819,17 @@ export function SettingsView({
           <div className="modal-actions">
             <button
               className="button secondary"
+              disabled={saving}
               onClick={() => setPending(null)}
             >
               Cancel
             </button>
             <button
               className="button primary"
-              onClick={() => {
-                if (restore(pending)) setPending(null);
+              disabled={saving}
+              onClick={async () => {
+                if (await restore(pending, reviewRevision.current))
+                  setPending(null);
               }}
             >
               Restore & replace
@@ -836,14 +846,16 @@ export function SettingsView({
           <div className="modal-actions">
             <button
               className="button secondary"
+              disabled={saving}
               onClick={() => setReset(false)}
             >
               Keep my records
             </button>
             <button
               className="button danger"
-              onClick={() => {
-                if (restore(emptyDatabase())) {
+              disabled={saving}
+              onClick={async () => {
+                if (await restore(emptyDatabase(), reviewRevision.current)) {
                   notify("Care records reset. A fresh start.");
                   setReset(false);
                 }

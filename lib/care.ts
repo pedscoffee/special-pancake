@@ -1,4 +1,4 @@
-import type { Database, Log, Unit } from "./types";
+import type { Database, Log, MedicineFavorite, Unit } from "./types";
 import {
   parseSymptomDetails,
   symptomDetailText,
@@ -335,10 +335,55 @@ export function parseDatabase(value: unknown): Database {
       !value.customMedicines.every((m) => str(m, 100) && m.trim()))
   )
     throw new Error("Medicine shortcuts in this backup are invalid.");
+  let medicineFavorites: MedicineFavorite[] | undefined;
+  if (value.medicineFavorites !== undefined) {
+    if (
+      !Array.isArray(value.medicineFavorites) ||
+      value.medicineFavorites.length > 1000
+    )
+      throw new Error("Medicine favorites in this backup are invalid.");
+    const favoriteIds = new Set<string>();
+    const favoriteNames = new Set<string>();
+    medicineFavorites = value.medicineFavorites.map((favorite) => {
+      if (
+        !record(favorite) ||
+        !str(favorite.id, 100) ||
+        !favorite.id ||
+        favoriteIds.has(favorite.id) ||
+        !str(favorite.childId, 100) ||
+        !ids.has(favorite.childId) ||
+        !str(favorite.name, 100) ||
+        !favorite.name.trim() ||
+        !str(favorite.dosage, 200) ||
+        (favorite.frequencyHours !== null &&
+          (typeof favorite.frequencyHours !== "number" ||
+            !Number.isFinite(favorite.frequencyHours) ||
+            favorite.frequencyHours <= 0 ||
+            favorite.frequencyHours > 8760))
+      )
+        throw new Error("Medicine favorites in this backup are invalid.");
+      const key = JSON.stringify([
+        favorite.childId,
+        favorite.name.trim().toLowerCase(),
+      ]);
+      if (favoriteNames.has(key))
+        throw new Error("This backup contains duplicate medicine favorites.");
+      favoriteNames.add(key);
+      favoriteIds.add(favorite.id);
+      return {
+        id: favorite.id,
+        childId: favorite.childId,
+        name: favorite.name.trim(),
+        dosage: favorite.dosage.trim(),
+        frequencyHours: favorite.frequencyHours as number | null,
+      };
+    });
+  }
   return {
     version: 2,
     children,
     logs,
+    ...(medicineFavorites !== undefined ? { medicineFavorites } : {}),
     customMedicines: Array.from(
       new Set(((value.customMedicines as string[]) || []).map((m) => m.trim())),
     ),

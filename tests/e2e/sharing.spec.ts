@@ -155,6 +155,7 @@ test("share preview, email draft, readable download and receiving preserve local
     })),
   ).toEqual([]);
   await dialog.getByRole("button", { name: "Add shared care" }).click();
+  await expect(dialog).not.toBeVisible();
   await page.reload();
   const merged = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kiddymeds_db_v2")!),
@@ -304,6 +305,7 @@ test("receiving validates files and requires a choice for differing records", as
     })),
   ).toEqual([]);
   await dialog.getByRole("button", { name: "Add shared care" }).click();
+  await expect(dialog).not.toBeVisible();
   await page.reload();
   const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kiddymeds_db_v2")!),
@@ -393,6 +395,7 @@ test("receiving a new child saves only after storage accepts the merge", async (
   await received(page, text);
   await dialog.getByLabel("Receive for").selectOption("new");
   await dialog.getByRole("button", { name: "Add shared care" }).click();
+  await expect(dialog).not.toBeVisible();
   await page.reload();
   const merged = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kiddymeds_db_v2")!),

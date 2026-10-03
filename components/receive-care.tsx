@@ -82,12 +82,12 @@ export function ReceiveCare() {
         choices[c.local.id]?.localSignature === recordSignature(c.local),
     ).length || 0;
   const changed = !!plan && (plan.added.length > 0 || incomingCount > 0);
-  function merge() {
+  async function merge() {
     if (!pending) return;
     setImporting(true);
     try {
       let mergeError = "";
-      const saved = update((current) => {
+      const saved = await update((current) => {
         try {
           return mergeCareShare(
             current,
