@@ -6,6 +6,8 @@ export type Child = {
   name: string;
   color: string;
   birthday?: string;
+  /** Parent's questions for the next visit. Kept on this device; never shared. */
+  visitQuestions?: string;
 };
 export type MedicineFavorite = {
   id: string;
@@ -14,6 +16,7 @@ export type MedicineFavorite = {
   dosage: string;
   frequencyHours: number | null;
 };
+export type MedicineResponse = "helped" | "a-little" | "no" | "not-sure";
 export type LogType = "MEDICINE" | "SYMPTOM" | "METRIC";
 export type Log = {
   id: string;
@@ -25,6 +28,8 @@ export type Log = {
     medicineName?: string;
     dosage?: string;
     frequencyHours?: number | null;
+    /** Caregiver's answer to "Did it help?" for a medicine entry. */
+    response?: MedicineResponse;
     symptomName?: string;
     temp?: string;
     tempUnit?: Unit;

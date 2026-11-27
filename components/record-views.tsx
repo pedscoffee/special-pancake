@@ -23,6 +23,7 @@ import type { Child, Database, Log } from "@/lib/types";
 import {
   emptyDatabase,
   filterLogs,
+  isStatusLog,
   LEGACY_KEY,
   localDate,
   logDetail,
@@ -38,6 +39,12 @@ import type { EntryAction } from "./care-app";
 import { ShareCare } from "./share-care";
 import { ReceiveCare } from "./receive-care";
 import { SHARE_MARKER } from "@/lib/sharing";
+import {
+  activeIllness,
+  buildVisitSummary,
+  visitSummaryText,
+} from "@/lib/visit-summary";
+import { VisitSummaryCard } from "./visit-summary";
 
 const FILTERS = [
   { value: "all", label: "Everything" },
@@ -269,16 +276,37 @@ export function HistoryView({
   );
 }
 
+function prettyDay(day: string) {
+  return new Date(`${day}T12:00:00`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
   const { db, now, notify } = useCare();
-  const [from, setFrom] = useState(() => localDate(now - 6 * 86400000));
+  const illness = activeIllness(logs, now);
+  // An ongoing illness sets the default dates: from the day it started.
+  const [from, setFrom] = useState(() =>
+    illness ? localDate(illness.start) : localDate(now - 6 * 86400000),
+  );
   const [to, setTo] = useState(() => localDate(now));
   const [type, setType] = useState("all");
   const [copyFallback, setCopyFallback] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const filtered = filterLogs(logs, { type, from, to });
-  const report = makeReport(child.name, filtered, db!.settings, from, to);
+  const inRange = filterLogs(logs, { from, to });
+  const summary = buildVisitSummary(
+    inRange,
+    logs,
+    db!.settings,
+    now,
+    to ? new Date(`${to}T23:59:59`).getTime() : now,
+  );
+  const logReport = makeReport(child.name, filtered, db!.settings, from, to);
+  const report = `${visitSummaryText(child, summary, now)}\n\n${"═".repeat(38)}\nEVERY ENTRY\n\n${logReport}`;
   const rangeValid = !from || !to || from <= to;
   async function copy() {
     try {
@@ -290,10 +318,10 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
     }
   }
   return (
-    <>
+    <div className="reports-page">
       <div className="view-toolbar sharing-toolbar">
         <div>
-          <h2>A little care, passed along.</h2>
+          <h2>Share with another caregiver</h2>
           <p>
             Share a snapshot with another caregiver, or add records they’ve
             sent.
@@ -307,7 +335,7 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
         <div className="report-controls">
           <section className="card">
             <IconBox icon={FileText} />
-            <h2 className="report-title">A clear handoff, ready to share.</h2>
+            <h2 className="report-title">Choose what to include</h2>
             <p className="section-description">
               Choose the records to share with family, a caregiver, or your
               healthcare provider.
@@ -334,6 +362,18 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
                 </label>
               </div>
               <div className="time-shortcuts">
+                {summary.onset && (
+                  <button
+                    onClick={() => {
+                      setFrom(localDate(summary.onset!.start));
+                      setTo(
+                        localDate(Math.min(summary.onset!.end ?? now, now)),
+                      );
+                    }}
+                  >
+                    This illness
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setFrom(localDate(now));
@@ -425,18 +465,20 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
           </div>
         </div>
         <section className="card report-preview">
-          <div className="report-preview-top">
-            <span className="eyebrow">REPORT PREVIEW</span>
-            <span className="pill-label">{filtered.length} entries</span>
-          </div>
           <div className="print-report">
+            <VisitSummaryCard key={child.id} child={child} summary={summary} />
+            <div className="report-preview-top">
+              <span className="eyebrow">EVERY ENTRY</span>
+              <span className="pill-label">{filtered.length} entries</span>
+            </div>
             <div className="print-brand">
               <Heart size={18} />
               KiddyMeds
             </div>
-            <h2>{child.name}’s care report</h2>
+            <h2>{child.name}’s care log</h2>
             <p className="report-period">
-              {from || "Beginning"} — {to || "Today"}
+              {from ? prettyDay(from) : "Beginning"} –{" "}
+              {to ? prettyDay(to) : "Today"}
             </p>
             <div className="report-totals">
               <span>
@@ -453,7 +495,11 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
               </span>
               <span>
                 <strong>
-                  {filtered.filter((l) => l.type === "METRIC").length}
+                  {
+                    filtered.filter(
+                      (l) => l.type === "METRIC" && !isStatusLog(l),
+                    ).length
+                  }
                 </strong>{" "}
                 check-ins
               </span>
@@ -470,7 +516,7 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
               />
             ) : (
               <pre className="report-text">
-                {report.split("\n").slice(4).join("\n")}
+                {logReport.split("\n").slice(4).join("\n")}
               </pre>
             )}
           </div>
@@ -485,7 +531,7 @@ export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
           onClose={() => setShareOpen(false)}
         />
       )}
-    </>
+    </div>
   );
 }
 

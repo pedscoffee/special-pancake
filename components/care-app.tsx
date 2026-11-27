@@ -34,6 +34,7 @@ import {
   convertTemperature,
   duration,
   formatTime,
+  isStatusLog,
   localDate,
   MEDICINES,
   METRICS,
@@ -54,6 +55,9 @@ import {
 import { EntryForm } from "./entry-form";
 import { DailyCheckInForm } from "./daily-checkin-form";
 import { ChildForm } from "./child-form";
+import { CareStatus, StatusForm } from "./care-status";
+import { InstallPrompt } from "./install-prompt";
+import { CalendarAlertButton } from "./calendar-alert";
 import { HistoryView, ReportsView, SettingsView } from "./record-views";
 
 const NAV = [
@@ -79,6 +83,7 @@ type Popup =
       favorite?: MedicineFavorite;
     }
   | { kind: "child"; child?: Child }
+  | { kind: "status"; log: Log }
   | { kind: "delete-log"; log: Log }
   | { kind: "delete-child"; child: Child; logs: Log[] };
 export type EntryAction = (
@@ -208,7 +213,11 @@ export function CareApp({ view }: { view: View }) {
     );
   };
   const edit = (log: Log) =>
-    setPopup({ kind: "entry", childId: log.childId, type: log.type, log });
+    setPopup(
+      isStatusLog(log)
+        ? { kind: "status", log }
+        : { kind: "entry", childId: log.childId, type: log.type, log },
+    );
   const title =
     view === "overview"
       ? "Overview"
@@ -278,7 +287,7 @@ export function CareApp({ view }: { view: View }) {
               on your device.
             </p>
             <Link href="/settings/">
-              Made with peace of mind <ArrowRight size={13} />
+              Privacy and backups <ArrowRight size={13} />
             </Link>
           </div>
           <Link
@@ -296,9 +305,6 @@ export function CareApp({ view }: { view: View }) {
             {demo ? "Leave demo" : "Take a peek at the demo"}
             <CirclePlay size={13} />
           </button>
-          <span className="sidebar-version">
-            A little care, all in one place.
-          </span>
         </div>
       </aside>
       <div className="workspace">
@@ -365,22 +371,19 @@ export function CareApp({ view }: { view: View }) {
           )}
           <div className="page-heading">
             <div>
-              <div className="eyebrow">A LITTLE CARE, ALL IN ONE PLACE</div>
-              <h1>
-                {view === "overview" ? "Small moments. Better care." : title}
-              </h1>
+              <h1>{title}</h1>
               <p>
                 {view === "overview"
-                  ? "A calmer way to care for your little ones."
+                  ? "Log care and see today at a glance."
                   : view === "medicines"
-                    ? "Every dose remembered. One less thing on your mind."
+                    ? "Record doses and see the intervals you entered."
                     : view === "symptoms"
-                      ? "Notice the little things. Keep the whole picture."
+                      ? "Record symptoms and daily check-ins."
                       : view === "history"
-                        ? "Your care story, one moment at a time."
+                        ? "Search, edit, and export every entry."
                         : view === "reports"
-                          ? "A clear picture of care, ready to share."
-                          : "A space that works for your family."}
+                          ? "A sick-visit summary to show your doctor, plus the full log."
+                          : "Backups, preferences, and child profiles."}
               </p>
             </div>
             <span className="heading-date">
@@ -486,8 +489,6 @@ export function CareApp({ view }: { view: View }) {
                 />
               )}
               <footer className="page-footer">
-                <Heart size={13} />
-                Made for the people who care the most.
                 <span>
                   For personal tracking. Follow your healthcare provider’s
                   instructions.
@@ -533,6 +534,15 @@ export function CareApp({ view }: { view: View }) {
           favorite={popup.favorite}
           log={popup.log}
           childId={popup.childId}
+          onClose={() => setPopup(null)}
+          onDelete={(log) => setPopup({ kind: "delete-log", log })}
+        />
+      )}
+      {popup?.kind === "status" && (
+        <StatusForm
+          key={popup.log.id}
+          childId={popup.log.childId}
+          log={popup.log}
           onClose={() => setPopup(null)}
           onDelete={(log) => setPopup({ kind: "delete-log", log })}
         />
@@ -728,25 +738,9 @@ function Overview({
           <Plus size={17} />
         </button>
       </div>
+      <CareStatus child={child} logs={logs} />
+      {!demo && <InstallPrompt hasRecords={!!db?.logs.length} />}
       <MedicineFavorites add={add} compact />
-      <div className="welcome-card">
-        <div>
-          <span className="welcome-tag">
-            <Heart size={13} />A LITTLE LOVE, A LITTLE LOG
-          </span>
-          <h2>
-            {child.name === "Your child"
-              ? "Their care, in good hands."
-              : `${child.name}’s care, in good hands.`}
-          </h2>
-          <p>
-            Medicines, symptoms, and all the in-between.
-            <br />
-            You take care of them. We’ll help with the remembering.
-          </p>
-        </div>
-        <Garden />
-      </div>
       <div className="overview-label">
         <h2>
           Today at a glance{" "}
@@ -757,7 +751,6 @@ function Overview({
               : ""}
           </span>
         </h2>
-        <span className="tiny-label">A little more peace of mind</span>
       </div>
       <div className="stats-grid">
         <Stat
@@ -830,17 +823,21 @@ function Overview({
         </div>
         <aside className="dashboard-aside">
           <DailyChecks logs={logs} add={add} compact />
-          <div className="gentle-note">
-            <span className="gentle-heart">
-              <Heart size={18} />
-            </span>
-            <p>
-              You don’t have to remember
-              <br />
-              everything. Just be there.
-            </p>
-          </div>
         </aside>
+      </div>
+      <div className="welcome-card">
+        <div>
+          <h2>
+            {child.name === "Your child"
+              ? "Their care, in good hands."
+              : `${child.name}’s care, in good hands.`}
+          </h2>
+          <p>
+            Medicines, symptoms, and all the in-between. <br />
+            You take care of them. We’ll help with the remembering.
+          </p>
+        </div>
+        <Garden />
       </div>
     </>
   );
@@ -880,14 +877,7 @@ export function TimerPanel({ logs }: { logs: Log[] }) {
   const timers = medicineTimers(logs, now);
   return (
     <section className="card timer-panel">
-      <SectionHeading
-        title="Medicine clocks"
-        aside={
-          <span className="pill-label">
-            <Clock3 size={12} />A helping hand
-          </span>
-        }
-      />
+      <SectionHeading title="Medicine clocks" />
       {timers.length ? (
         <div className="timers">
           {timers.map(({ log, target, remaining, elapsed }) => (
@@ -945,6 +935,16 @@ export function TimerPanel({ logs }: { logs: Log[] }) {
                   {log.data.frequencyHours}h interval
                 </span>
               </div>
+              {remaining > 0 && (
+                <CalendarAlertButton
+                  log={log}
+                  target={target}
+                  childName={
+                    db!.children.find((c) => c.id === log.childId)?.name ||
+                    "Your child"
+                  }
+                />
+              )}
             </div>
           ))}
         </div>

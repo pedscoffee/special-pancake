@@ -8,6 +8,8 @@ import {
   Utensils,
   Droplets,
   Bath,
+  CircleCheck,
+  HeartPulse,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -131,12 +133,16 @@ export function EntryList({
             ? Pill
             : log.type === "SYMPTOM"
               ? symptom.icon
-              : log.data.metricType === "appetite"
-                ? Utensils
-                : log.data.metricType === "fluids" ||
-                    log.data.metricType === "urine"
-                  ? Droplets
-                  : Bath;
+              : log.data.metricType === "illness"
+                ? HeartPulse
+                : log.data.metricType === "not-seen"
+                  ? CircleCheck
+                  : log.data.metricType === "appetite"
+                    ? Utensils
+                    : log.data.metricType === "fluids" ||
+                        log.data.metricType === "urine"
+                      ? Droplets
+                      : Bath;
         const color =
           log.type === "MEDICINE"
             ? "sage"

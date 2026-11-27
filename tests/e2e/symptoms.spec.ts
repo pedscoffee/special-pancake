@@ -5,6 +5,8 @@ import { symptomObservation } from "../../lib/symptom-observations";
 test("every symptom has a distinct icon shared by observations, overview and history", async ({
   page,
 }) => {
+  // Logs every preset in turn; allow for slower machines under parallel load.
+  test.setTimeout(60000);
   await page.goto("/symptoms/");
   await expect(page.locator(".symptom-tile")).toHaveCount(
     SYMPTOM_PRESETS.length,
