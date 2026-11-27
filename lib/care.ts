@@ -1,4 +1,10 @@
-import type { Database, Log, MedicineFavorite, Unit } from "./types";
+import type {
+  Database,
+  Log,
+  MedicineFavorite,
+  MedicineResponse,
+  Unit,
+} from "./types";
 import {
   parseSymptomDetails,
   symptomDetailText,
@@ -39,6 +45,49 @@ export const OBSERVATION_PERIODS = [
   { value: "since-last", label: "Since the previous check-in" },
   { value: "other", label: "Another period (describe in notes)" },
 ] as const;
+/** Answers to "Did it help?" after a medicine. A caregiver's impression, not an assessment. */
+export const MEDICINE_RESPONSES: { value: MedicineResponse; label: string }[] =
+  [
+    { value: "helped", label: "Helped" },
+    { value: "a-little", label: "Helped a little" },
+    { value: "no", label: "Didn’t help" },
+    { value: "not-sure", label: "Not sure" },
+  ];
+export function responseLabel(response?: string) {
+  return MEDICINE_RESPONSES.find((r) => r.value === response)?.label;
+}
+/** Illness start/end markers, recorded as care entries so history, undo, and sharing include them. */
+export const ILLNESS_METRIC = "illness";
+export const ILLNESS_VALUES = { start: "Started", end: "Feeling better" };
+/** "Checked, not seen" observations: a parent looked for these and didn't see them. */
+export const NOT_SEEN_METRIC = "not-seen";
+export const NOT_SEEN_OPTIONS = [
+  "Fever",
+  "Cough",
+  "Vomiting",
+  "Diarrhea",
+  "Rash",
+] as const;
+export function isStatusLog(log: Log) {
+  return (
+    log.type === "METRIC" &&
+    (log.data.metricType === ILLNESS_METRIC ||
+      log.data.metricType === NOT_SEEN_METRIC)
+  );
+}
+export function validateStatusData(data: Log["data"]) {
+  if (
+    data.metricType === ILLNESS_METRIC &&
+    !Object.values(ILLNESS_VALUES).includes(data.value || "")
+  )
+    throw new Error("An illness marker is invalid.");
+  if (
+    data.metricType === NOT_SEEN_METRIC &&
+    !(NOT_SEEN_OPTIONS as readonly string[]).includes(data.value || "")
+  )
+    throw new Error("A “not seen” check is invalid.");
+}
+
 export const METRICS = [
   {
     key: "appetite",
@@ -194,6 +243,8 @@ export function parseDatabase(value: unknown): Database {
           child.birthday)
     )
       throw new Error("A child’s birthday is invalid.");
+    if (child.visitQuestions !== undefined && !str(child.visitQuestions, 2000))
+      throw new Error("A child’s visit questions are invalid.");
     return {
       id: child.id,
       name: child.name.trim(),
@@ -202,6 +253,10 @@ export function parseDatabase(value: unknown): Database {
           ? child.color
           : COLORS[i % COLORS.length],
       ...(child.birthday ? { birthday: child.birthday as string } : {}),
+      ...(typeof child.visitQuestions === "string" &&
+      child.visitQuestions.trim()
+        ? { visitQuestions: child.visitQuestions }
+        : {}),
     };
   });
   const logIds = new Set<string>();
@@ -268,6 +323,14 @@ export function parseDatabase(value: unknown): Database {
     )
       throw new Error("A medicine interval is invalid.");
     data.frequencyHours = source.frequencyHours as number | null | undefined;
+    if (source.response !== undefined) {
+      if (
+        log.type !== "MEDICINE" ||
+        !MEDICINE_RESPONSES.some((r) => r.value === source.response)
+      )
+        throw new Error("A medicine response is invalid.");
+      data.response = source.response as MedicineResponse;
+    }
     for (const key of [
       "wetDiapers",
       "bowelMovements",
@@ -289,6 +352,7 @@ export function parseDatabase(value: unknown): Database {
     }
     validateBathroomData(data);
     if (log.type === "SYMPTOM") validateSymptomData(data);
+    if (log.type === "METRIC") validateStatusData(data);
     if (
       log.type !== "METRIC" &&
       [
@@ -446,6 +510,12 @@ export function logTitle(log: Log) {
     !log.data.observationPeriod
   )
     return "Bathroom (previous check-in)";
+  if (log.type === "METRIC" && log.data.metricType === ILLNESS_METRIC)
+    return log.data.value === ILLNESS_VALUES.start
+      ? "Got sick"
+      : "Feeling better";
+  if (log.type === "METRIC" && log.data.metricType === NOT_SEEN_METRIC)
+    return `No ${log.data.value?.toLocaleLowerCase()}`;
   return log.type === "MEDICINE"
     ? log.data.medicineName || "Medicine"
     : log.type === "SYMPTOM"
@@ -470,6 +540,7 @@ export function logDetail(log: Log, unit: Unit = "F") {
       [
         d.dosage,
         d.frequencyHours && `${d.frequencyHours}h recorded interval`,
+        responseLabel(d.response),
         d.notes,
       ]
         .filter(Boolean)
@@ -487,6 +558,9 @@ export function logDetail(log: Log, unit: Unit = "F") {
         .filter(Boolean)
         .join(" · ") || "Symptom recorded"
     );
+  if (d.metricType === ILLNESS_METRIC)
+    return d.notes || "Marked by a caregiver";
+  if (d.metricType === NOT_SEEN_METRIC) return d.notes || "Checked, not seen";
   return [
     d.value,
     d.wetDiapers !== undefined &&
@@ -612,12 +686,12 @@ export function demoDatabase(now: number): Database {
     {
       type: "METRIC",
       timeGiven: now - 3 * 3600000,
-      data: { metricType: "fluids", value: "Normal" },
+      data: { metricType: "fluids", value: "Usual amount" },
     },
     {
       type: "METRIC",
       timeGiven: now - 3 * 3600000,
-      data: { metricType: "appetite", value: "Less than normal" },
+      data: { metricType: "appetite", value: "Less than usual" },
     },
     {
       type: "METRIC",
@@ -654,6 +728,92 @@ export function demoDatabase(now: number): Database {
       data: { symptomName: "Fever", temp: "101.1", tempUnit: "F" },
     },
   ];
+  // A short illness for the sick-visit summary: started three evenings ago.
+  const day = (daysAgo: number, hour: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(hour, 0, 0, 0);
+    return Math.min(d.getTime(), now - 60000);
+  };
+  sample.push(
+    {
+      type: "METRIC",
+      timeGiven: day(3, 18),
+      data: {
+        metricType: ILLNESS_METRIC,
+        value: ILLNESS_VALUES.start,
+        notes: "Warm and fussy after daycare",
+      },
+    },
+    {
+      type: "SYMPTOM",
+      timeGiven: day(3, 19),
+      data: { symptomName: "Fever", temp: "101.4", tempUnit: "F" },
+    },
+    {
+      type: "MEDICINE",
+      timeGiven: day(3, 20),
+      data: {
+        medicineName: "Tylenol",
+        dosage: "As directed by our doctor",
+        frequencyHours: 6,
+        response: "a-little",
+      },
+    },
+    {
+      type: "SYMPTOM",
+      timeGiven: day(2, 9),
+      data: { symptomName: "Fever", temp: "102.8", tempUnit: "F" },
+    },
+    {
+      type: "SYMPTOM",
+      timeGiven: day(2, 8),
+      data: { symptomName: "Vomiting", notes: "Once, after breakfast" },
+    },
+    {
+      type: "MEDICINE",
+      timeGiven: day(2, 10),
+      data: {
+        medicineName: "Motrin",
+        dosage: "As directed by our doctor",
+        frequencyHours: 6,
+        response: "helped",
+      },
+    },
+    {
+      type: "METRIC",
+      timeGiven: day(2, 17),
+      data: {
+        metricType: "fluids",
+        value: "Less than usual",
+        observationPeriod: "today",
+      },
+    },
+    {
+      type: "METRIC",
+      timeGiven: day(2, 17),
+      data: {
+        metricType: "urine",
+        value: "Less than usual",
+        observationPeriod: "today",
+      },
+    },
+    {
+      type: "METRIC",
+      timeGiven: day(2, 17),
+      data: { metricType: NOT_SEEN_METRIC, value: "Diarrhea" },
+    },
+    {
+      type: "METRIC",
+      timeGiven: day(1, 17),
+      data: { metricType: NOT_SEEN_METRIC, value: "Diarrhea" },
+    },
+    {
+      type: "METRIC",
+      timeGiven: day(1, 17),
+      data: { metricType: NOT_SEEN_METRIC, value: "Vomiting" },
+    },
+  );
   db.logs = sample.map((l, i) => ({
     ...l,
     id: `demo-log-${i}`,

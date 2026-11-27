@@ -1,5 +1,7 @@
 import {
   METRICS,
+  NOT_SEEN_METRIC,
+  NOT_SEEN_OPTIONS,
   OBSERVATION_PERIODS,
   parseDatabase,
   validateBathroomData,
@@ -18,6 +20,8 @@ export type DailyDraft = {
   bowelMovements?: number;
   stoolDiapers?: number;
   stoolConsistency?: string;
+  /** Symptoms the caregiver checked for and didn't see during this period. */
+  notSeen?: string[];
 };
 
 export function buildDailyCheckIn(
@@ -82,6 +86,22 @@ export function buildDailyCheckIn(
       timeGiven: draft.timeGiven,
       timestamp: now,
       data,
+    });
+  }
+  for (const symptom of new Set(draft.notSeen || [])) {
+    if (!(NOT_SEEN_OPTIONS as readonly string[]).includes(symptom))
+      throw new Error("Choose from the listed symptoms.");
+    logs.push({
+      id: makeId(),
+      childId: draft.childId,
+      type: "METRIC",
+      timeGiven: draft.timeGiven,
+      timestamp: now,
+      data: {
+        metricType: NOT_SEEN_METRIC,
+        value: symptom,
+        notes: draft.notes.trim(),
+      },
     });
   }
   if (!logs.length)

@@ -55,6 +55,7 @@ export function CareProvider({ children }: { children: ReactNode }) {
   const actualProblem = useRef("");
   const demoRef = useRef(false);
   const protectedRef = useRef(false);
+  const persistRequested = useRef(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function notify(text: string) {
@@ -85,6 +86,12 @@ export function CareProvider({ children }: { children: ReactNode }) {
         });
         if (!mounted) return;
         protectedRef.current = false;
+        if (!persistRequested.current) {
+          persistRequested.current = true;
+          // Ask the browser not to clear records under storage pressure.
+          // Browsers may decline; records still save normally.
+          navigator.storage?.persist?.().catch(() => {});
+        }
       } catch {
         if (!mounted) return;
         try {

@@ -5,7 +5,12 @@ import { Check, Utensils, Droplets, Bath } from "lucide-react";
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
 import { BathroomFields } from "./bathroom-fields";
-import { localInput, METRICS, OBSERVATION_PERIODS } from "@/lib/care";
+import {
+  localInput,
+  METRICS,
+  NOT_SEEN_OPTIONS,
+  OBSERVATION_PERIODS,
+} from "@/lib/care";
 import { addDailyCheckIn, buildDailyCheckIn } from "@/lib/daily-checkin";
 import { useFormDraft } from "./use-form-draft";
 import type { Log } from "@/lib/types";
@@ -57,6 +62,9 @@ export function DailyCheckInForm({
         bowelMovements: count("stool-bowelMovements"),
         stoolDiapers: count("stool-stoolDiapers"),
         stoolConsistency: text("stool-stoolConsistency") || undefined,
+        notSeen: NOT_SEEN_OPTIONS.filter(
+          (symptom) => form.get(`not-seen-${symptom}`) === "on",
+        ),
       });
       let mergeError = "";
       const saved = await update((current) => {
@@ -186,6 +194,21 @@ export function DailyCheckInForm({
             );
           })}
         </div>
+        <fieldset className="daily-form-section not-seen-section">
+          <legend>Checked, not seen</legend>
+          <p className="field-hint">
+            Tick anything you looked out for and didn’t see. Doctors find “no
+            vomiting” as useful as “vomiting.”
+          </p>
+          <div className="not-seen-options">
+            {NOT_SEEN_OPTIONS.map((symptom) => (
+              <label key={symptom} className="not-seen-chip">
+                <input type="checkbox" name={`not-seen-${symptom}`} />
+                No {symptom.toLowerCase()}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label>
           Notes <span className="optional">optional</span>
           <textarea

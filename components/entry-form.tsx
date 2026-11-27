@@ -16,6 +16,7 @@ import {
   convertTemperature,
   formatTime,
   localInput,
+  MEDICINE_RESPONSES,
   MEDICINES,
   METRICS,
   relativeTime,
@@ -26,7 +27,12 @@ import {
 import { recordSignature } from "@/lib/sharing";
 import { saveCareRecord, saveMedicineFavorite } from "@/lib/record-updates";
 import { useFormDraft } from "./use-form-draft";
-import type { Log, LogType, MedicineFavorite } from "@/lib/types";
+import type {
+  Log,
+  LogType,
+  MedicineFavorite,
+  MedicineResponse,
+} from "@/lib/types";
 
 export function EntryForm({
   kind,
@@ -160,6 +166,9 @@ export function EntryForm({
         dosage: String(form.get("dosage") || "").trim(),
         frequencyHours: frequency ? Number(frequency) : null,
       });
+    const response = String(form.get("response") || "");
+    if (kind === "MEDICINE" && response)
+      data.response = response as MedicineResponse;
     if (kind === "SYMPTOM") {
       data.symptomName = title;
       if (title.toLowerCase() === "fever") {
@@ -426,6 +435,22 @@ export function EntryForm({
                 />
               </label>
             </div>
+            <label>
+              Did it help? <span className="optional">optional</span>
+              <select
+                name="response"
+                defaultValue={
+                  draftInitial?.response ?? log?.data.response ?? ""
+                }
+              >
+                <option value="">Not answered yet</option>
+                {MEDICINE_RESPONSES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="favorite-checkbox">
               <input
                 type="checkbox"
