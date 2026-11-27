@@ -1,18 +1,19 @@
 /**
  * A single calendar event (.ics) with an alert when a recorded interval ends.
- * Built on the device; the phone's own calendar app sounds the alert. The
- * wording reports the interval the caregiver entered and never suggests a dose.
+ * Built on the device; the phone's own calendar app sounds the alert.
  */
 export type IntervalAlert = {
   uid: string;
   at: number;
-  childName: string;
-  medicineName: string;
-  intervalHours: number;
-  /** Calendars sync to the cloud and show on lock screens, so details are opt-in. */
-  includeDetails: boolean;
   now?: number;
 };
+
+/**
+ * Always generic. Calendars sync to the cloud, show on lock screens and get
+ * shared, so the event never names the child, the medicine, or KiddyMeds data.
+ */
+export const ALERT_TITLE = "KiddyMeds reminder";
+const ALERT_DESCRIPTION = "Open KiddyMeds to see your records.";
 
 function stamp(time: number) {
   return new Date(time)
@@ -20,41 +21,8 @@ function stamp(time: number) {
     .replace(/[-:]/g, "")
     .replace(/\.\d{3}/, "");
 }
-function escapeText(text: string) {
-  return text
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
-}
-/** Fold lines longer than 75 octets, as iCalendar requires. */
-function fold(line: string) {
-  const bytes = new TextEncoder().encode(line);
-  if (bytes.length <= 75) return line;
-  const parts: string[] = [];
-  let current = "";
-  for (const char of line) {
-    const limit = parts.length ? 74 : 75;
-    if (new TextEncoder().encode(current + char).length > limit) {
-      parts.push(current);
-      current = char;
-    } else current += char;
-  }
-  parts.push(current);
-  return parts.join("\r\n ");
-}
-
-export function alertTitle(alert: IntervalAlert) {
-  return alert.includeDetails
-    ? `${alert.childName}: recorded ${alert.medicineName} interval ends`
-    : "KiddyMeds reminder";
-}
 
 export function intervalAlertIcs(alert: IntervalAlert) {
-  const title = alertTitle(alert);
-  const description = alert.includeDetails
-    ? `The ${alert.intervalHours}-hour interval you recorded in KiddyMeds for ${alert.medicineName} ends now. This is not a dosing instruction; follow your healthcare provider’s directions.`
-    : "Open KiddyMeds to see your records.";
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -67,16 +35,16 @@ export function intervalAlertIcs(alert: IntervalAlert) {
     `DTSTART:${stamp(alert.at)}`,
     // A distinct end time; iOS may refuse events that start and end together.
     `DTEND:${stamp(alert.at + 5 * 60000)}`,
-    `SUMMARY:${escapeText(title)}`,
-    `DESCRIPTION:${escapeText(description)}`,
+    `SUMMARY:${ALERT_TITLE}`,
+    `DESCRIPTION:${ALERT_DESCRIPTION}`,
     "TRANSP:TRANSPARENT",
     "BEGIN:VALARM",
     "ACTION:DISPLAY",
-    `DESCRIPTION:${escapeText(title)}`,
+    `DESCRIPTION:${ALERT_TITLE}`,
     "TRIGGER:PT0M",
     "END:VALARM",
     "END:VEVENT",
     "END:VCALENDAR",
   ];
-  return lines.map(fold).join("\r\n") + "\r\n";
+  return lines.join("\r\n") + "\r\n";
 }

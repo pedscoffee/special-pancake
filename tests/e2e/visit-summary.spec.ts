@@ -125,7 +125,7 @@ test("the overview asks whether a recent medicine helped", async ({ page }) => {
   );
   expect(stored).toBe("a-little");
 
-  // The clock offers a calendar alert that's generic unless details are chosen.
+  // The clock offers a calendar alert that's always generic.
   await page
     .getByRole("button", {
       name: /calendar alert for the end of the recorded Tylenol interval/,
@@ -137,6 +137,11 @@ test("the overview asks whether a recent medicine helped", async ({ page }) => {
   await dialog.getByRole("button", { name: "Download event" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toBe("kiddymeds-reminder.ics");
+  const ics = await (
+    await import("node:fs/promises")
+  ).readFile((await file.path())!, "utf8");
+  expect(ics).toContain("SUMMARY:KiddyMeds reminder");
+  expect(ics).not.toContain("Tylenol");
 });
 
 test("the demo shows a complete sick-visit summary first on a phone", async ({

@@ -5,7 +5,7 @@ import { CalendarPlus, Download, Share2 } from "lucide-react";
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
 import { formatTime } from "@/lib/care";
-import { alertTitle, intervalAlertIcs } from "@/lib/calendar";
+import { ALERT_TITLE, intervalAlertIcs } from "@/lib/calendar";
 import { downloadFile } from "@/lib/download";
 import type { Log } from "@/lib/types";
 
@@ -13,11 +13,9 @@ import type { Log } from "@/lib/types";
 export function CalendarAlertButton({
   log,
   target,
-  childName,
 }: {
   log: Log;
   target: number;
-  childName: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -34,7 +32,6 @@ export function CalendarAlertButton({
         <CalendarAlertDialog
           log={log}
           target={target}
-          childName={childName}
           onClose={() => setOpen(false)}
         />
       )}
@@ -45,25 +42,14 @@ export function CalendarAlertButton({
 function CalendarAlertDialog({
   log,
   target,
-  childName,
   onClose,
 }: {
   log: Log;
   target: number;
-  childName: string;
   onClose: () => void;
 }) {
   const { db, notify } = useCare();
-  const [details, setDetails] = useState(false);
-  const alert = {
-    uid: `${log.id}-${target}`,
-    at: target,
-    childName,
-    medicineName: log.data.medicineName || "medicine",
-    intervalHours: log.data.frequencyHours || 0,
-    includeDetails: details,
-  };
-  const ics = intervalAlertIcs(alert);
+  const ics = intervalAlertIcs({ uid: `${log.id}-${target}`, at: target });
   const file =
     typeof File !== "undefined"
       ? new File([ics], "kiddymeds-reminder.ics", { type: "text/calendar" })
@@ -80,18 +66,10 @@ function CalendarAlertDialog({
       onClose={onClose}
     >
       <div className="form-stack">
-        <label className="favorite-checkbox">
-          <input
-            type="checkbox"
-            checked={details}
-            onChange={(e) => setDetails(e.target.checked)}
-          />
-          Show {childName}’s name and the medicine in the event
-        </label>
         <p className="field-hint">
-          Event title: <strong>{alertTitle(alert)}</strong>. Calendars can sync
-          to the cloud and show on your lock screen, so details are off unless
-          you choose them.
+          The event is titled <strong>{ALERT_TITLE}</strong> and never includes
+          your child’s name, the medicine, or any care details, so it’s safe on
+          a lock screen or a shared calendar.
         </p>
         <p className="field-hint">
           The event won’t change if you edit or remove this entry later. Share

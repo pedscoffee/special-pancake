@@ -936,14 +936,7 @@ export function TimerPanel({ logs }: { logs: Log[] }) {
                 </span>
               </div>
               {remaining > 0 && (
-                <CalendarAlertButton
-                  log={log}
-                  target={target}
-                  childName={
-                    db!.children.find((c) => c.id === log.childId)?.name ||
-                    "Your child"
-                  }
-                />
+                <CalendarAlertButton log={log} target={target} />
               )}
             </div>
           ))}
