@@ -103,6 +103,10 @@ test("summary restates recorded observations by day without interpreting them", 
   const s = buildVisitSummary(illness, illness, settings, now);
   assert.equal(s.onset?.label, "Sick since Mon, Nov 23 · day 4");
   const row = (key: string) => s.rows.find((r) => r.key === key)!;
+  assert.deepEqual(
+    s.rows.map((r) => r.key),
+    ["Fever", "fluids", "urine", "Cough", "Vomiting", "Diarrhea"],
+  );
   assert.deepEqual(row("Fever"), {
     key: "Fever",
     label: "Fever",
@@ -115,7 +119,8 @@ test("summary restates recorded observations by day without interpreting them", 
   assert.equal(row("fluids").secondary, "Usual Wed – today");
   // A day's least-reassuring observation wins; diaper counts stay attached.
   assert.equal(row("urine").primary, "Less than usual (2 wet diapers) Tue");
-  assert.equal(row("appetite").status, "not-recorded");
+  // Rows with nothing recorded are left out entirely.
+  assert.equal(row("appetite"), undefined);
   assert.equal(row("Cough").primary, "Tue – Wed");
   assert.equal(row("Cough").secondary, "Mild");
   assert.equal(row("Vomiting").primary, "Tue");
@@ -126,7 +131,7 @@ test("summary restates recorded observations by day without interpreting them", 
     primary: "None",
     secondary: "Checked Tue – Wed",
   });
-  assert.equal(row("Rash").status, "not-recorded");
+  assert.equal(row("Rash"), undefined);
   assert.deepEqual(s.others, ["Runny nose today"]);
   assert.deepEqual(
     s.tried.map((t) => [t.name, t.days, t.response]),

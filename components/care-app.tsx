@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  Activity,
   ArrowRight,
   Bath,
   ChevronRight,
@@ -14,8 +13,9 @@ import {
   House,
   LayoutGrid,
   ListFilter,
-  Pencil,
   Pill,
+  CalendarPlus,
+  Pencil,
   Plus,
   Settings2,
   Search,
@@ -57,7 +57,9 @@ import { DailyCheckInForm } from "./daily-checkin-form";
 import { ChildForm } from "./child-form";
 import { CareStatus, StatusForm } from "./care-status";
 import { InstallPrompt } from "./install-prompt";
-import { CalendarAlertButton } from "./calendar-alert";
+import { QuickNegatives } from "./quick-negatives";
+import { ChildMenu } from "./child-menu";
+import { CalendarAlertButton, CalendarAlertDialog } from "./calendar-alert";
 import { HistoryView, ReportsView, SettingsView } from "./record-views";
 
 const NAV = [
@@ -343,9 +345,12 @@ export function CareApp({ view }: { view: View }) {
             >
               <Settings2 size={20} />
             </Link>
-            <span className="care-avatar" aria-hidden="true">
-              <Heart size={18} />
-            </span>
+            {ready && db && activeChild && (
+              <ChildMenu
+                onAdd={() => setPopup({ kind: "child" })}
+                onEdit={(child) => setPopup({ kind: "child", child })}
+              />
+            )}
           </div>
         </header>
         <main id="main-content" className="main-content" tabIndex={-1}>
@@ -380,9 +385,9 @@ export function CareApp({ view }: { view: View }) {
                     : view === "symptoms"
                       ? "Record symptoms and daily check-ins."
                       : view === "history"
-                        ? "Search, edit, and export every entry."
+                        ? "Search, edit, share and export every entry."
                         : view === "reports"
-                          ? "A sick-visit summary to show your doctor, plus the full log."
+                          ? "A sick-visit summary to show your doctor."
                           : "Backups, preferences, and child profiles."}
               </p>
             </div>
@@ -412,56 +417,6 @@ export function CareApp({ view }: { view: View }) {
             </div>
           ) : (
             <>
-              {view !== "settings" && (
-                <div className="family-bar">
-                  <div
-                    className="child-switcher"
-                    role="group"
-                    aria-label="Choose a child"
-                  >
-                    {db.children.map((child) => (
-                      <button
-                        key={child.id}
-                        className={`child-chip ${child.id === activeChild.id ? "selected" : ""}`}
-                        aria-pressed={child.id === activeChild.id}
-                        onClick={() =>
-                          update((database) => ({
-                            ...database,
-                            settings: {
-                              ...database.settings,
-                              activeChildId: child.id,
-                            },
-                          }))
-                        }
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`child-initial ${child.color}`}
-                        >
-                          {child.name.charAt(0).toUpperCase()}
-                        </span>
-                        {child.name}
-                      </button>
-                    ))}
-                    <button
-                      className="add-child"
-                      onClick={() => setPopup({ kind: "child" })}
-                    >
-                      <Plus size={16} />
-                      Add child
-                    </button>
-                  </div>
-                  <button
-                    className="text-button profile-edit"
-                    onClick={() =>
-                      setPopup({ kind: "child", child: activeChild })
-                    }
-                  >
-                    <Pencil size={14} />
-                    Edit profile
-                  </button>
-                </div>
-              )}
               {view === "overview" && (
                 <Overview
                   child={activeChild}
@@ -474,10 +429,20 @@ export function CareApp({ view }: { view: View }) {
                 <MedicinesView logs={logs} add={add} edit={edit} />
               )}
               {view === "symptoms" && (
-                <SymptomsView logs={logs} add={add} edit={edit} />
+                <SymptomsView
+                  childId={activeChild.id}
+                  logs={logs}
+                  add={add}
+                  edit={edit}
+                />
               )}
               {view === "history" && (
-                <HistoryView logs={logs} edit={edit} add={add} />
+                <HistoryView
+                  child={activeChild}
+                  logs={logs}
+                  edit={edit}
+                  add={add}
+                />
               )}
               {view === "reports" && (
                 <ReportsView child={activeChild} logs={logs} />
@@ -677,154 +642,38 @@ function Overview({
   add: EntryAction;
   edit: (log: Log) => void;
 }) {
-  const { db, now, demo, startDemo } = useCare();
-  const today = todayLogs(logs, now);
-  const medicines = today.filter((l) => l.type === "MEDICINE");
-  const symptoms = today.filter((l) => l.type === "SYMPTOM");
-  const temperature = logs.find((l) => l.data.temp);
-  const birthday = child.birthday
-    ? new Date(`${child.birthday}T12:00:00`)
-    : null;
-  const age = birthday
-    ? new Date(now).getFullYear() -
-      birthday.getFullYear() -
-      (new Date(now).getMonth() < birthday.getMonth() ||
-      (new Date(now).getMonth() === birthday.getMonth() &&
-        new Date(now).getDate() < birthday.getDate())
-        ? 1
-        : 0)
-    : null;
+  const { db, demo, startDemo } = useCare();
   return (
     <>
-      <div
-        className="overview-actions"
-        role="group"
-        aria-label={`Log care for ${child.name}`}
-      >
-        <button
-          className="quick-action"
-          aria-label="Log a medicine"
-          onClick={() => add("MEDICINE")}
-        >
-          <IconBox icon={Pill} small />
-          <span>
-            <strong>Medicine</strong>
-            <small>Record a dose</small>
-          </span>
-          <Plus size={17} />
-        </button>
-        <button
-          className="quick-action"
-          aria-label="Symptom The little things you notice"
-          onClick={() => add("SYMPTOM")}
-        >
-          <IconBox icon={Thermometer} color="peach" small />
-          <span>
-            <strong>Symptom</strong>
-            <small>What you notice</small>
-          </span>
-          <Plus size={17} />
-        </button>
-        <button
-          className="quick-action"
-          aria-label="Daily check-in Meals, fluids & bathroom"
-          onClick={() => add("METRIC")}
-        >
-          <IconBox icon={Droplets} color="mint" small />
-          <span>
-            <strong>Daily check-in</strong>
-            <small>Meals, fluids & bathroom</small>
-          </span>
-          <Plus size={17} />
-        </button>
-      </div>
       <CareStatus child={child} logs={logs} />
       {!demo && <InstallPrompt hasRecords={!!db?.logs.length} />}
-      <MedicineFavorites add={add} compact />
-      <div className="overview-label">
-        <h2>
-          Today at a glance{" "}
-          <span>
-            {child.name}
-            {age !== null && age >= 0
-              ? ` · ${age < 1 ? "Under 1" : age} ${age < 1 ? "year" : age === 1 ? "year" : "years"} old`
-              : ""}
-          </span>
-        </h2>
-      </div>
-      <div className="stats-grid">
-        <Stat
-          icon={Pill}
-          color="sage"
-          label="Medicines logged"
-          value={String(medicines.length)}
-          detail={
-            medicines.length
-              ? `Last at ${formatTime(medicines[0].timeGiven, db!.settings.timeFormat)}`
-              : "A fresh start for today"
+      <OverviewMedicines child={child} logs={logs} add={add} edit={edit} />
+      <TodayCard child={child} logs={logs} add={add} />
+      <section className="card activity-card">
+        <SectionHeading
+          title="Recent care"
+          aside={
+            <Link className="text-button" href="/history/">
+              View history <ArrowRight size={14} />
+            </Link>
           }
         />
-        <Stat
-          icon={Thermometer}
-          color="peach"
-          label="Latest temperature"
-          value={
-            temperature
-              ? `${convertTemperature(temperature.data.temp!, temperature.data.tempUnit || db!.settings.tempUnit, db!.settings.tempUnit)}°`
-              : "—"
-          }
-          suffix={db!.settings.tempUnit}
-          detail={
-            temperature
-              ? `${localDate(temperature.timeGiven) === localDate(now) ? "Today" : new Date(temperature.timeGiven).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${formatTime(temperature.timeGiven, db!.settings.timeFormat)}`
-              : "No temperature recorded"
-          }
-        />
-        <Stat
-          icon={Activity}
-          color="mint"
-          label="Symptoms logged"
-          value={String(symptoms.length)}
-          detail={
-            symptoms.length
-              ? `${new Set(symptoms.map((l) => l.data.symptomName)).size} ${new Set(symptoms.map((l) => l.data.symptomName)).size === 1 ? "symptom" : "symptoms"} noted today`
-              : "Nothing noted today"
-          }
-        />
-      </div>
-      <div className="dashboard-grid">
-        <div className="dashboard-main">
-          <TimerPanel logs={logs} />
-          <section className="card activity-card">
-            <SectionHeading
-              title="Recent care"
-              aside={
-                <Link className="text-button" href="/history/">
-                  View history <ArrowRight size={14} />
-                </Link>
-              }
-            />
-            {logs.length ? (
-              <EntryList logs={logs.slice(0, 5)} onEdit={edit} compact />
-            ) : (
-              <EmptyState
-                title="Every little moment matters."
-                text="Log a medicine or symptom to start your child’s care story."
-                action={
-                  !demo ? (
-                    <button className="text-button" onClick={startDemo}>
-                      Explore an example <ArrowRight size={14} />
-                    </button>
-                  ) : undefined
-                }
-              />
-            )}
-          </section>
-        </div>
-        <aside className="dashboard-aside">
-          <DailyChecks logs={logs} add={add} compact />
-        </aside>
-      </div>
+        {logs.length ? (
+          <EntryList logs={logs.slice(0, 5)} onEdit={edit} compact />
+        ) : (
+          <EmptyState
+            title="Every little moment matters."
+            text="Log a medicine or symptom to start your child’s care story."
+            action={
+              !demo ? (
+                <button className="text-button" onClick={startDemo}>
+                  Explore an example <ArrowRight size={14} />
+                </button>
+              ) : undefined
+            }
+          />
+        )}
+      </section>
       <div className="welcome-card">
         <div>
           <h2>
@@ -842,32 +691,279 @@ function Overview({
     </>
   );
 }
-function Stat({
-  icon,
-  color,
-  label,
-  value,
-  detail,
-  suffix,
+
+/** Medicine clocks first; favorites without a running clock as chips below. */
+function OverviewMedicines({
+  child,
+  logs,
+  add,
+  edit,
 }: {
-  icon: typeof Pill;
-  color: string;
-  label: string;
-  value: string;
-  detail: string;
-  suffix?: string;
+  child: Child;
+  logs: Log[];
+  add: EntryAction;
+  edit: (log: Log) => void;
 }) {
+  const { db, now } = useCare();
+  const [open, setOpen] = useState<string | null>(null);
+  const [calendarFor, setCalendarFor] = useState<{
+    log: Log;
+    target: number;
+  } | null>(null);
+  const timers = medicineTimers(logs, now);
+  const clockNames = new Set(
+    timers.map((t) => t.log.data.medicineName!.trim().toLowerCase()),
+  );
+  const favorites = (db?.medicineFavorites || []).filter(
+    (f) =>
+      f.childId === child.id && !clockNames.has(f.name.trim().toLowerCase()),
+  );
+  const selected = timers.find((t) => t.log.id === open);
   return (
-    <section className="stat-card">
-      <div className="stat-top">
-        <span>{label}</span>
-        <IconBox icon={icon} color={color} small />
+    <section className="card overview-medicines" aria-labelledby="meds-title">
+      <div className="section-heading">
+        <h2 id="meds-title">Medicines</h2>
+        <button
+          className="button primary small"
+          aria-label="Log a medicine"
+          onClick={() => add("MEDICINE")}
+        >
+          <Plus size={16} />
+          Log medicine
+        </button>
       </div>
-      <div className="stat-value">
-        {value}
-        <span>{suffix}</span>
+      {timers.length > 0 && (
+        <div className="timers">
+          {timers.map(({ log, target, remaining, elapsed }) => {
+            const percent = Math.min(
+              100,
+              Math.max(
+                0,
+                (elapsed / (log.data.frequencyHours! * 3600000)) * 100,
+              ),
+            );
+            return (
+              <button
+                className="timer clock-button"
+                key={log.id}
+                aria-label={`${log.data.medicineName}: ${remaining > 0 ? `${duration(remaining)} until recorded interval` : "interval passed"}. Options`}
+                onClick={() => setOpen(log.id)}
+              >
+                <div className="timer-header">
+                  <div className="timer-name">
+                    <IconBox icon={Pill} small />
+                    <div>
+                      <strong>{log.data.medicineName}</strong>
+                      <span>
+                        Logged at{" "}
+                        {formatTime(log.timeGiven, db!.settings.timeFormat)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="timer-value">
+                    <strong>
+                      {remaining > 0 ? duration(remaining) : "Interval passed"}
+                    </strong>
+                    <span>
+                      {remaining > 0
+                        ? `until ${formatTime(target, db!.settings.timeFormat)}`
+                        : `${duration(elapsed)} since last dose`}
+                    </span>
+                  </div>
+                </div>
+                <div className="timer-progress" aria-hidden="true">
+                  <span style={{ width: `${percent}%` }} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {favorites.length > 0 && (
+        <div className="favorite-buttons overview-favorites">
+          {favorites.map((favorite) => (
+            <button
+              key={favorite.id}
+              className="button secondary"
+              onClick={() => add("MEDICINE", favorite.name, favorite)}
+            >
+              <Pill size={16} />
+              {favorite.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {!timers.length && !favorites.length && (
+        <p className="field-hint">
+          Add the interval from your care instructions when you log a medicine
+          to see a clock here. Tap a clock to give that medicine again.
+        </p>
+      )}
+      {timers.length > 0 && (
+        <ClockNote>
+          Clocks reflect the intervals you record. Always follow your care
+          instructions.
+        </ClockNote>
+      )}
+      {selected && (
+        <Modal
+          title={selected.log.data.medicineName!}
+          subtitle={`Last logged ${formatTime(selected.log.timeGiven, db!.settings.timeFormat)} · ${selected.log.data.frequencyHours}h recorded interval`}
+          onClose={() => setOpen(null)}
+        >
+          <div className="clock-sheet">
+            <button
+              className="button primary"
+              onClick={() => {
+                setOpen(null);
+                add("MEDICINE", selected.log.data.medicineName, {
+                  id: "",
+                  childId: child.id,
+                  name: selected.log.data.medicineName!,
+                  dosage: selected.log.data.dosage || "",
+                  frequencyHours: selected.log.data.frequencyHours ?? null,
+                });
+              }}
+            >
+              <Plus size={16} />
+              Give again
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => {
+                setOpen(null);
+                edit(selected.log);
+              }}
+            >
+              <Pencil size={16} />
+              Edit last entry
+            </button>
+            {selected.remaining > 0 && (
+              <button
+                className="button secondary"
+                aria-label={`Add a calendar alert for the end of the recorded ${selected.log.data.medicineName} interval`}
+                onClick={() => {
+                  setOpen(null);
+                  setCalendarFor({
+                    log: selected.log,
+                    target: selected.target,
+                  });
+                }}
+              >
+                <CalendarPlus size={16} />
+                Calendar alert
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
+      {calendarFor && (
+        <CalendarAlertDialog
+          log={calendarFor.log}
+          target={calendarFor.target}
+          onClose={() => setCalendarFor(null)}
+        />
+      )}
+    </section>
+  );
+}
+
+/** Today at a glance and the daily check-in, together. */
+function TodayCard({
+  child,
+  logs,
+  add,
+}: {
+  child: Child;
+  logs: Log[];
+  add: EntryAction;
+}) {
+  const { db, now } = useCare();
+  const today = todayLogs(logs, now);
+  const medicines = today.filter((l) => l.type === "MEDICINE");
+  const symptoms = today.filter((l) => l.type === "SYMPTOM");
+  const temperature = logs.find((l) => l.data.temp);
+  const symptomNames = new Set(symptoms.map((l) => l.data.symptomName));
+  return (
+    <section className="card today-card" aria-labelledby="today-title">
+      <div className="section-heading">
+        <h2 id="today-title">
+          Today <span>{child.name}</span>
+        </h2>
+        <div className="button-group">
+          <button
+            className="button secondary small"
+            aria-label="Log a symptom"
+            onClick={() => add("SYMPTOM")}
+          >
+            <Thermometer size={16} />
+            Symptom
+          </button>
+          <button
+            className="button secondary small"
+            aria-label="Daily check-in"
+            onClick={() => add("METRIC")}
+          >
+            <Droplets size={16} />
+            Check in
+          </button>
+        </div>
       </div>
-      <p>{detail}</p>
+      <div className="today-stats">
+        <div>
+          <span>Medicines</span>
+          <strong>{medicines.length}</strong>
+          <small>
+            {medicines.length
+              ? `Last at ${formatTime(medicines[0].timeGiven, db!.settings.timeFormat)}`
+              : "None today"}
+          </small>
+        </div>
+        <div>
+          <span>Latest temp</span>
+          <strong>
+            {temperature
+              ? `${convertTemperature(temperature.data.temp!, temperature.data.tempUnit || db!.settings.tempUnit, db!.settings.tempUnit)}°${db!.settings.tempUnit}`
+              : "—"}
+          </strong>
+          <small>
+            {temperature
+              ? `${localDate(temperature.timeGiven) === localDate(now) ? "Today" : new Date(temperature.timeGiven).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${formatTime(temperature.timeGiven, db!.settings.timeFormat)}`
+              : "None recorded"}
+          </small>
+        </div>
+        <div>
+          <span>Symptoms</span>
+          <strong>{symptoms.length}</strong>
+          <small>
+            {symptoms.length
+              ? `${symptomNames.size} ${symptomNames.size === 1 ? "kind" : "kinds"} today`
+              : "None today"}
+          </small>
+        </div>
+      </div>
+      <div className="today-checks">
+        {METRICS.map((m, i) => {
+          const last = today.find(
+            (l) => l.type === "METRIC" && l.data.metricType === m.key,
+          );
+          const Icon = [Utensils, Droplets, Droplets, Bath][i];
+          return (
+            <button
+              className="daily-check"
+              key={m.key}
+              onClick={() => add("METRIC", m.key)}
+            >
+              <Icon size={18} strokeWidth={1.6} />
+              <span>{m.name}</span>
+              <span className={`daily-value ${last ? "recorded" : ""}`}>
+                {last?.data.value || "Add check-in"}
+              </span>
+              <ChevronRight size={13} />
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -1145,10 +1241,12 @@ function MedicinesView({
   );
 }
 function SymptomsView({
+  childId,
   logs,
   add,
   edit,
 }: {
+  childId?: string;
   logs: Log[];
   add: EntryAction;
   edit: (log: Log) => void;
@@ -1168,6 +1266,7 @@ function SymptomsView({
           Log symptom
         </button>
       </div>
+      {childId && <QuickNegatives childId={childId} logs={logs} />}
       <div className="symptom-controls">
         <div className="search-field">
           <Search size={17} aria-hidden="true" />

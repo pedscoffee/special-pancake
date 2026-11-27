@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 async function start(page: Page) {
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Your child", exact: true }),
+    page.getByRole("button", { name: "Switch child (current: Your child)" }),
   ).toBeVisible();
 }
 
@@ -21,7 +21,7 @@ test("a family records an illness and the report summarizes it for the doctor", 
 
   // A fever, a medicine with an answer, and a check-in with "not seen" checks.
   await page
-    .getByRole("button", { name: /^Symptom/ })
+    .getByRole("button", { name: "Log a symptom", exact: true })
     .first()
     .click();
   dialog = page.getByRole("dialog");
@@ -40,7 +40,9 @@ test("a family records an illness and the report summarizes it for the doctor", 
   await dialog.getByRole("button", { name: "Save entry" }).click();
   await expect(dialog).not.toBeVisible();
 
-  await page.getByRole("button", { name: /^Daily check-in/ }).click();
+  await page
+    .getByRole("button", { name: "Daily check-in", exact: true })
+    .click();
   dialog = page.getByRole("dialog");
   await dialog
     .getByLabel("Drinking compared with usual")
@@ -70,7 +72,9 @@ test("a family records an illness and the report summarizes it for the doctor", 
   await expect(row("Drinking")).toContainText("Less than usual today");
   await expect(row("Vomiting")).toContainText("None");
   await expect(row("Vomiting")).toContainText("Checked today");
-  await expect(row("Rash")).toContainText("Not recorded");
+  // Only what was recorded appears: nothing about rash was entered.
+  await expect(row("Rash")).toHaveCount(0);
+  await expect(row("Eating")).toHaveCount(0);
   await expect(summary.locator(".visit-tried")).toContainText("Motrin");
   await expect(summary.locator(".visit-tried")).toContainText("Helped");
 
@@ -83,12 +87,13 @@ test("a family records an illness and the report summarizes it for the doctor", 
     page.locator(".visit-summary").getByLabel("OUR QUESTIONS"),
   ).toHaveValue("Can she go to daycare?");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.getByRole("button", { name: "Copy report" }).click();
+  await page.getByRole("button", { name: "Copy summary" }).click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toMatch(/^SICK-VISIT SUMMARY — Your child/);
   expect(copied).toContain("Vomiting: None (Checked today)");
   expect(copied).toContain("Our questions:\nCan she go to daycare?");
-  expect(copied).toContain("EVERY ENTRY");
+  expect(copied).not.toContain("EVERY ENTRY");
+  expect(copied).not.toContain("Rash");
 
   // Feeling better closes the illness.
   await page.goto("/");
@@ -125,7 +130,11 @@ test("the overview asks whether a recent medicine helped", async ({ page }) => {
   );
   expect(stored).toBe("a-little");
 
-  // The clock offers a calendar alert that's always generic.
+  // Tapping the clock offers Give again, Edit, and an always-generic calendar alert.
+  await page.getByRole("button", { name: /^Tylenol: .+ Options$/ }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Give again" }),
+  ).toBeVisible();
   await page
     .getByRole("button", {
       name: /calendar alert for the end of the recorded Tylenol interval/,
@@ -160,12 +169,8 @@ test("the demo shows a complete sick-visit summary first on a phone", async ({
   await expect(summary.getByText(/^Sick since .+ · day 4$/)).toBeVisible();
   await expect(summary.locator(".visit-row.noticed").first()).toBeVisible();
   await expect(summary.locator(".visit-tried")).toContainText("Helped");
-  if (info.project.name !== "desktop") {
-    const summaryTop = (await summary.boundingBox())!.y;
-    const controlsTop = (await page.locator(".report-controls").boundingBox())!
-      .y;
-    expect(summaryTop).toBeLessThan(controlsTop);
-  }
+  // The full log and sharing live in History now.
+  await expect(page.getByRole("button", { name: "Share care" })).toHaveCount(0);
   // The report fits a phone screen without sideways scrolling.
   expect(
     await page.evaluate(

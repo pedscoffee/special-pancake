@@ -74,7 +74,7 @@ function validDay(value: unknown): value is string {
 
 export function parseCareShare(input: unknown): CareShare {
   if (!input || typeof input !== "object")
-    throw new Error("Choose a KiddyMeds care file shared from Reports.");
+    throw new Error("Choose a KiddyMeds care file shared from History.");
   const value = input as Record<string, unknown>;
   if (
     value.kind !== "kiddymeds-care-share" ||

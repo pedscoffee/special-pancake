@@ -1,9 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
+import { addChildFromMenu, chooseChild, editProfileFromMenu } from "./helpers";
 
 async function start(page: Page) {
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Your child", exact: true }),
+    page.getByRole("button", { name: "Switch child (current: Your child)" }),
   ).toBeVisible();
 }
 async function openSettings(page: Page) {
@@ -29,7 +30,9 @@ test("care entries persist, edit correctly, and can be removed with undo", async
 }) => {
   await start(page);
   await logMedicine(page);
-  await expect(page.getByText("6h interval", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Tylenol: .+ until recorded interval/ }),
+  ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: /^Edit Tylenol at/ }).click();
   await page
@@ -57,22 +60,17 @@ test("children have independent records and can be renamed", async ({
 }) => {
   await start(page);
   await logMedicine(page);
-  await page.getByRole("button", { name: "Add child", exact: true }).click();
-  await page.getByLabel("First name or nickname").fill("Oliver");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Add child", exact: true })
-    .click();
+  await addChildFromMenu(page, "Oliver");
   await expect(
     page.getByRole("button", { name: /^Edit Tylenol at/ }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+  await editProfileFromMenu(page);
   await page.getByLabel("First name or nickname").fill("Oli");
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(
-    page.getByRole("button", { name: "Oli", exact: true }),
+    page.getByRole("button", { name: "Switch child (current: Oli)" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Your child", exact: true }).click();
+  await chooseChild(page, "Your child");
   await expect(
     page.getByRole("button", { name: /^Edit Tylenol at/ }),
   ).toBeVisible();
@@ -82,7 +80,7 @@ test("temperature preferences convert past readings without changing their sourc
 }) => {
   await start(page);
   await page
-    .getByRole("button", { name: "Symptom The little things you notice" })
+    .getByRole("button", { name: "Log a symptom", exact: true })
     .click();
   await page
     .getByRole("dialog")
@@ -119,7 +117,7 @@ test("daily check-ins, history search, and reports include care notes", async ({
 }) => {
   await start(page);
   await page
-    .getByRole("button", { name: "Daily check-in Meals, fluids & bathroom" })
+    .getByRole("button", { name: "Daily check-in", exact: true })
     .click();
   await page
     .getByLabel("Drinking compared with usual")
@@ -136,8 +134,8 @@ test("daily check-ins, history search, and reports include care notes", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Medicines", exact: true }).click();
   await expect(page.getByText("No matching moments.")).toBeVisible();
-  await page.goto("/reports/");
-  await expect(page.locator(".report-text")).toContainText(
+  await page.goto("/history/");
+  await expect(page.locator(".history-print .report-text")).toContainText(
     "Water at breakfast",
   );
   const download = page.waitForEvent("download");
@@ -202,7 +200,7 @@ test("legacy data migrates automatically and the original is retained", async ({
   );
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Emma", exact: true }),
+    page.getByRole("button", { name: "Switch child (current: Emma)" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /^Edit Legacy medicine at/ }),
@@ -261,7 +259,9 @@ test("validated backup restores only after the review dialog", async ({
   ).toBe("Your child");
   await page.getByRole("button", { name: "Restore & replace" }).click();
   await expect(
-    page.getByRole("button", { name: /Restored child/ }),
+    page.getByRole("button", {
+      name: "Switch child (current: Restored child)",
+    }),
   ).toBeVisible();
 });
 test("corrupt stored records are preserved and changes cannot silently overwrite them", async ({
