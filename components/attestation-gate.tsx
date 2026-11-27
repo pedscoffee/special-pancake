@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Heart } from "lucide-react";
 
 /** Bump when the wording changes so everyone sees and agrees to it again. */
 export const ATTESTATION_VERSION = "2026-11-27";
 export const ATTESTATION_KEY = "kiddymeds-attestation";
 
-function hasAttested() {
+export function hasAttested() {
   try {
     const saved = JSON.parse(localStorage.getItem(ATTESTATION_KEY) || "null");
     return saved?.version === ATTESTATION_VERSION;
@@ -18,19 +19,22 @@ function hasAttested() {
 
 /** Shows the first-run agreement before any part of KiddyMeds, the demo included. */
 export function AttestationGate({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [state, setState] = useState<"checking" | "needed" | "done">(
     "checking",
   );
   useEffect(() => {
     queueMicrotask(() => setState(hasAttested() ? "done" : "needed"));
   }, []);
-  if (state === "done") return <>{children}</>;
+  // A hand-off link can be read without the agreement; saving asks for it.
+  if (state === "done" || pathname?.startsWith("/handoff"))
+    return <>{children}</>;
   if (state === "checking")
     return <div className="attestation-checking" aria-busy="true" />;
   return <Attestation onDone={() => setState("done")} />;
 }
 
-function Attestation({ onDone }: { onDone: () => void }) {
+export function Attestation({ onDone }: { onDone: () => void }) {
   const [care, setCare] = useState(false);
   const [development, setDevelopment] = useState(false);
   const [error, setError] = useState("");

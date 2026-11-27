@@ -70,7 +70,9 @@ test("share preview, email draft, readable download and receiving preserve local
   const source = fixture();
   await seed(page, source);
   await page.goto("/history/");
-  await page.getByRole("button", { name: "Share care", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Share care file", exact: true })
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog
     .getByLabel("Personal message optional")
@@ -203,7 +205,9 @@ test("native share receives the selected snapshot; cancellation and unsupported 
     .getByRole("group", { name: "Filter by record type" })
     .getByRole("button", { name: "Symptoms", exact: true })
     .click();
-  await page.getByRole("button", { name: "Share care", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Share care file", exact: true })
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog
     .getByRole("button", { name: "Share message & care file" })
@@ -254,7 +258,9 @@ test("native share receives the selected snapshot; cancellation and unsupported 
     });
   });
   await dialog.getByRole("button", { name: "Close dialog" }).click();
-  await page.getByRole("button", { name: "Share care", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Share care file", exact: true })
+    .click();
   await expect(dialog).toContainText("download the care file and attach it");
   await dialog
     .getByRole("button", { name: "Share message", exact: true })
@@ -339,7 +345,9 @@ test("desktop fallback lets users copy the message when the share sheet is unava
     });
   });
   await page.goto("/history/");
-  await page.getByRole("button", { name: "Share care", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Share care file", exact: true })
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog
     .getByRole("button", { name: "Copy message", exact: true })

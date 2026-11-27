@@ -16,6 +16,7 @@ import {
   Search,
   ShieldCheck,
   CirclePlay,
+  Send,
   Share2,
   Upload,
   X,
@@ -45,6 +46,7 @@ import {
   visitSummaryText,
 } from "@/lib/visit-summary";
 import { VisitSummaryCard } from "./visit-summary";
+import { HandoffSheet } from "./handoff-sheet";
 
 const FILTERS = [
   { value: "all", label: "Everything" },
@@ -66,6 +68,7 @@ export function HistoryView({
 }) {
   const { db, now, notify } = useCare();
   const [shareOpen, setShareOpen] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
   const [copyFallback, setCopyFallback] = useState(false);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
@@ -306,11 +309,19 @@ export function HistoryView({
         <div className="history-share-actions">
           <button
             className="button primary"
+            disabled={!logs.length}
+            onClick={() => setHandoffOpen(true)}
+          >
+            <Send size={16} />
+            Hand off by link or QR
+          </button>
+          <button
+            className="button secondary"
             disabled={!rangeValid || !filtered.length}
             onClick={() => setShareOpen(true)}
           >
             <Share2 size={16} />
-            Share care
+            Share care file
           </button>
           <button
             className="button secondary"
@@ -380,6 +391,13 @@ export function HistoryView({
           {report.split("\n").slice(4).join("\n")}
         </pre>
       </div>
+      {handoffOpen && (
+        <HandoffSheet
+          child={child}
+          logs={logs}
+          onClose={() => setHandoffOpen(false)}
+        />
+      )}
       {shareOpen && (
         <ShareCare
           childId={child.id}

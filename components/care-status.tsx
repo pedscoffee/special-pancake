@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Check, HeartPulse, Pill, Trash2, X } from "lucide-react";
+import { Check, HeartPulse, Pill, Send, Trash2, X } from "lucide-react";
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
+import { HandoffSheet } from "./handoff-sheet";
 import {
   formatTime,
   ILLNESS_METRIC,
@@ -30,6 +31,7 @@ function askedLater(): string[] {
 export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
   const { db, now, update, saving } = useCare();
   const [marking, setMarking] = useState<null | "start" | "end">(null);
+  const [handoff, setHandoff] = useState(false);
   const [later, setLater] = useState<string[]>(askedLater);
   const illness = activeIllness(logs, now);
   // Ask about the latest medicine given 30 minutes to a day ago.
@@ -77,13 +79,24 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
               </>
             )}
           </span>
-          <button
-            className="button secondary"
-            disabled={saving}
-            onClick={() => setMarking(illness ? "end" : "start")}
-          >
-            {illness ? "Feeling better" : "Got sick"}
-          </button>
+          <div className="illness-actions">
+            {illness && (
+              <button
+                className="button secondary"
+                onClick={() => setHandoff(true)}
+              >
+                <Send size={16} />
+                Hand off
+              </button>
+            )}
+            <button
+              className="button secondary"
+              disabled={saving}
+              onClick={() => setMarking(illness ? "end" : "start")}
+            >
+              {illness ? "Feeling better" : "Got sick"}
+            </button>
+          </div>
         </div>
         {ask && (
           <div
@@ -124,6 +137,13 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
           </div>
         )}
       </section>
+      {handoff && (
+        <HandoffSheet
+          child={child}
+          logs={logs}
+          onClose={() => setHandoff(false)}
+        />
+      )}
       {marking && (
         <StatusForm
           childId={child.id}
