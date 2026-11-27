@@ -207,7 +207,7 @@ export function ShareCare({
         </p>
         <p className="field-hint">
           The care file is readable on its own. To import it, the recipient
-          opens KiddyMeds → Reports → Receive care and selects the file.
+          opens KiddyMeds → History → Receive care and selects the file.
         </p>
         {status && (
           <p className="inline-note" role="status">

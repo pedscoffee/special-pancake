@@ -55,8 +55,8 @@ test("urine records offer all five observations, optional diaper counts and edit
     .fill("Mixed diaper counted here too");
   await dialog.getByRole("button", { name: "Save changes" }).click();
   await expect(dialog).not.toBeVisible();
-  await page.goto("/reports/");
-  await expect(page.locator(".report-text")).toContainText(
+  await page.goto("/history/");
+  await expect(page.locator(".history-print .report-text")).toContainText(
     "More than usual · 2 wet diapers · Today so far · Mixed diaper counted here too",
   );
 });
@@ -118,8 +118,8 @@ test("stool counts and descriptions persist, export and handle zero output", asy
   expect(await readFile((await download.path())!, "utf8")).toContain(
     "2 bowel movements · 1 stool diaper · Mushy · Since the previous check-in · Mixed diaper after lunch",
   );
-  await page.goto("/reports/");
-  await expect(page.locator(".report-text")).toContainText(
+  await page.goto("/history/");
+  await expect(page.locator(".history-print .report-text")).toContainText(
     "2 bowel movements · 1 stool diaper · Mushy",
   );
   await page.goto("/");

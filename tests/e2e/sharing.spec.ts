@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 import { careFileText, makeCareShare, readCareFile } from "../../lib/sharing";
 import type { Database } from "../../lib/types";
+import { openChildMenu } from "./helpers";
 
 function fixture(): Database {
   const now = Date.now() - 60000;
@@ -68,7 +69,7 @@ test("share preview, email draft, readable download and receiving preserve local
 }, info) => {
   const source = fixture();
   await seed(page, source);
-  await page.goto("/reports/");
+  await page.goto("/history/");
   await page.getByRole("button", { name: "Share care", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog
@@ -197,8 +198,11 @@ test("native share receives the selected snapshot; cancellation and unsupported 
       },
     });
   });
-  await page.goto("/reports/");
-  await page.getByLabel("Include", { exact: false }).selectOption("SYMPTOM");
+  await page.goto("/history/");
+  await page
+    .getByRole("group", { name: "Filter by record type" })
+    .getByRole("button", { name: "Symptoms", exact: true })
+    .click();
   await page.getByRole("button", { name: "Share care", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog
@@ -273,7 +277,7 @@ test("receiving validates files and requires a choice for differing records", as
   );
   source.logs[0].data.notes = "My version of the observation";
   await seed(page, source);
-  await page.goto("/reports/");
+  await page.goto("/history/");
   const before = await page.evaluate(() =>
     localStorage.getItem("kiddymeds_db_v2"),
   );
@@ -334,7 +338,7 @@ test("desktop fallback lets users copy the message when the share sheet is unava
       },
     });
   });
-  await page.goto("/reports/");
+  await page.goto("/history/");
   await page.getByRole("button", { name: "Share care", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog
@@ -363,7 +367,7 @@ test("receiving a new child saves only after storage accepts the merge", async (
   recipient.logs = [recipient.logs[2]];
   recipient.settings.activeChildId = "oli";
   await seed(page, recipient);
-  await page.goto("/reports/");
+  await page.goto("/history/");
   const before = await page.evaluate(() =>
     localStorage.getItem("kiddymeds_db_v2"),
   );
@@ -387,10 +391,12 @@ test("receiving a new child saves only after storage accepts the merge", async (
   ).toBe(before);
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(
-    page
-      .getByRole("group", { name: "Choose a child" })
-      .getByRole("button", { name: "Ella", exact: true }),
+    (await openChildMenu(page)).getByRole("button", {
+      name: "Ella",
+      exact: true,
+    }),
   ).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await page.reload();
   await received(page, text);
   await dialog.getByLabel("Receive for").selectOption("new");

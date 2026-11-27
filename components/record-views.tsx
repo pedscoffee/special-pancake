@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   ArrowDownToLine,
@@ -7,7 +9,6 @@ import {
   Check,
   ChevronRight,
   Copy,
-  FileText,
   Heart,
   Info,
   Plus,
@@ -23,7 +24,6 @@ import type { Child, Database, Log } from "@/lib/types";
 import {
   emptyDatabase,
   filterLogs,
-  isStatusLog,
   LEGACY_KEY,
   localDate,
   logDetail,
@@ -34,14 +34,14 @@ import {
 } from "@/lib/care";
 import { downloadFile } from "@/lib/download";
 import { useCare } from "./care-provider";
-import { EmptyState, EntryList, IconBox, Modal, SectionHeading } from "./ui";
+import { EmptyState, EntryList, Modal, SectionHeading } from "./ui";
 import type { EntryAction } from "./care-app";
 import { ShareCare } from "./share-care";
 import { ReceiveCare } from "./receive-care";
 import { SHARE_MARKER } from "@/lib/sharing";
 import {
-  activeIllness,
   buildVisitSummary,
+  findOnset,
   visitSummaryText,
 } from "@/lib/visit-summary";
 import { VisitSummaryCard } from "./visit-summary";
@@ -54,15 +54,19 @@ const FILTERS = [
 ];
 
 export function HistoryView({
+  child,
   logs,
   edit,
   add,
 }: {
+  child: Child;
   logs: Log[];
   edit: (log: Log) => void;
   add: EntryAction;
 }) {
   const { db, now, notify } = useCare();
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copyFallback, setCopyFallback] = useState(false);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [from, setFrom] = useState("");
@@ -97,6 +101,17 @@ export function HistoryView({
     );
     notify("History exported.");
   }
+  const rangeValid = !from || !to || from <= to;
+  const report = makeReport(child.name, filtered, db!.settings, from, to);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(report);
+      notify("Entries copied. Ready to share.");
+    } catch {
+      setCopyFallback(true);
+      notify("Select and copy the entries below.");
+    }
+  }
   return (
     <>
       <div className="view-toolbar">
@@ -108,14 +123,6 @@ export function HistoryView({
           </p>
         </div>
         <div className="button-group">
-          <button
-            className="button secondary"
-            onClick={csv}
-            disabled={!filtered.length}
-          >
-            <ArrowDownToLine size={16} />
-            Export CSV
-          </button>
           <button className="button primary" onClick={() => add("MEDICINE")}>
             <Plus size={16} />
             Add entry
@@ -272,6 +279,116 @@ export function HistoryView({
           />
         )}
       </section>
+      <section
+        className="card history-share"
+        aria-labelledby="history-share-title"
+      >
+        <div className="history-share-head">
+          <div>
+            <h2 id="history-share-title">Share or export</h2>
+            <p className="section-description">
+              Uses the dates and record type selected above:{" "}
+              <strong>
+                {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+              </strong>
+              .
+              {search &&
+                " Search narrows copy, download and print, but not Share care."}
+            </p>
+          </div>
+          <ReceiveCare />
+        </div>
+        {!rangeValid && (
+          <p role="alert" className="form-error">
+            The end date must be on or after the start date.
+          </p>
+        )}
+        <div className="history-share-actions">
+          <button
+            className="button primary"
+            disabled={!rangeValid || !filtered.length}
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 size={16} />
+            Share care
+          </button>
+          <button
+            className="button secondary"
+            onClick={copy}
+            disabled={!rangeValid || !filtered.length}
+          >
+            <Copy size={16} />
+            Copy entries
+          </button>
+          <button
+            className="button secondary"
+            disabled={!rangeValid || !filtered.length}
+            onClick={() => {
+              downloadFile(
+                report,
+                `kiddymeds-${child.name.replace(/[^a-zA-Z0-9]/g, "-")}-${localDate(now)}.txt`,
+              );
+              notify("Entries downloaded.");
+            }}
+          >
+            <ArrowDownToLine size={16} />
+            Download
+          </button>
+          <button
+            className="button secondary"
+            onClick={csv}
+            disabled={!filtered.length}
+          >
+            <ArrowDownToLine size={16} />
+            Export CSV
+          </button>
+          <button
+            className="button secondary"
+            disabled={!rangeValid || !filtered.length}
+            onClick={() => window.print()}
+          >
+            <Printer size={16} />
+            Print / PDF
+          </button>
+        </div>
+        {copyFallback && (
+          <textarea
+            className="report-text"
+            readOnly
+            value={report}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label="Entries to copy"
+            autoFocus
+          />
+        )}
+        <p className="field-hint">
+          <ShieldCheck size={15} /> Nothing is sent automatically. You decide
+          when and how to share.
+        </p>
+      </section>
+      <div className="print-report history-print" aria-hidden="true">
+        <div className="print-brand">
+          <Heart size={18} />
+          KiddyMeds
+        </div>
+        <h2>{child.name}’s care log</h2>
+        <p className="report-period">
+          {from ? prettyDay(from) : "Beginning"} –{" "}
+          {to ? prettyDay(to) : "Today"}
+        </p>
+        <pre className="report-text">
+          {report.split("\n").slice(4).join("\n")}
+        </pre>
+      </div>
+      {shareOpen && (
+        <ShareCare
+          childId={child.id}
+          from={from}
+          to={to}
+          type={type}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -286,251 +403,136 @@ function prettyDay(day: string) {
 
 export function ReportsView({ child, logs }: { child: Child; logs: Log[] }) {
   const { db, now, notify } = useCare();
-  const illness = activeIllness(logs, now);
-  // An ongoing illness sets the default dates: from the day it started.
-  const [from, setFrom] = useState(() =>
-    illness ? localDate(illness.start) : localDate(now - 6 * 86400000),
+  const illness = findOnset(logs, now, now);
+  const lastWeek = localDate(now - 6 * 86400000);
+  // The latest illness sets the default period; otherwise the last 7 days.
+  const [mode, setMode] = useState<"illness" | "week" | "custom">(() =>
+    illness ? "illness" : "week",
   );
-  const [to, setTo] = useState(() => localDate(now));
-  const [type, setType] = useState("all");
+  const [customFrom, setCustomFrom] = useState(lastWeek);
+  const [customTo, setCustomTo] = useState(() => localDate(now));
   const [copyFallback, setCopyFallback] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const textRef = useRef<HTMLTextAreaElement>(null);
-  const filtered = filterLogs(logs, { type, from, to });
-  const inRange = filterLogs(logs, { from, to });
+  const period =
+    mode === "illness" && illness
+      ? {
+          from: localDate(illness.start),
+          to: localDate(Math.min(illness.end ?? now, now)),
+        }
+      : mode === "custom"
+        ? { from: customFrom, to: customTo }
+        : { from: lastWeek, to: localDate(now) };
+  const rangeValid = !period.from || !period.to || period.from <= period.to;
   const summary = buildVisitSummary(
-    inRange,
+    filterLogs(logs, period),
     logs,
     db!.settings,
     now,
-    to ? new Date(`${to}T23:59:59`).getTime() : now,
+    period.to ? new Date(`${period.to}T23:59:59`).getTime() : now,
   );
-  const logReport = makeReport(child.name, filtered, db!.settings, from, to);
-  const report = `${visitSummaryText(child, summary, now)}\n\n${"═".repeat(38)}\nEVERY ENTRY\n\n${logReport}`;
-  const rangeValid = !from || !to || from <= to;
+  const text = visitSummaryText(child, summary, now);
   async function copy() {
     try {
-      await navigator.clipboard.writeText(report);
-      notify("Report copied. Ready to share.");
+      await navigator.clipboard.writeText(text);
+      notify("Summary copied.");
     } catch {
       setCopyFallback(true);
-      notify("Select and copy the report below.");
+      notify("Select and copy the summary below.");
     }
   }
   return (
     <div className="reports-page">
-      <div className="view-toolbar sharing-toolbar">
-        <div>
-          <h2>Share with another caregiver</h2>
-          <p>
-            Share a snapshot with another caregiver, or add records they’ve
-            sent.
-          </p>
+      <div className="report-period-picker">
+        <div className="segmented" role="group" aria-label="Report period">
+          {illness && (
+            <button
+              aria-pressed={mode === "illness"}
+              className={mode === "illness" ? "selected" : ""}
+              onClick={() => setMode("illness")}
+            >
+              This illness
+            </button>
+          )}
+          <button
+            aria-pressed={mode === "week"}
+            className={mode === "week" ? "selected" : ""}
+            onClick={() => setMode("week")}
+          >
+            Last 7 days
+          </button>
+          <button
+            aria-pressed={mode === "custom"}
+            className={mode === "custom" ? "selected" : ""}
+            onClick={() => setMode("custom")}
+          >
+            Choose dates
+          </button>
         </div>
-        <div className="receive-action">
-          <ReceiveCare />
-        </div>
-      </div>
-      <div className="reports-grid">
-        <div className="report-controls">
-          <section className="card">
-            <IconBox icon={FileText} />
-            <h2 className="report-title">Choose what to include</h2>
-            <p className="section-description">
-              Choose the records to share with family, a caregiver, or your
-              healthcare provider.
-            </p>
-            <div className="form-stack">
-              <div className="form-grid">
-                <label>
-                  From
-                  <input
-                    type="date"
-                    value={from}
-                    max={to || undefined}
-                    onChange={(e) => setFrom(e.target.value)}
-                  />
-                </label>
-                <label>
-                  To
-                  <input
-                    type="date"
-                    value={to}
-                    min={from || undefined}
-                    onChange={(e) => setTo(e.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="time-shortcuts">
-                {summary.onset && (
-                  <button
-                    onClick={() => {
-                      setFrom(localDate(summary.onset!.start));
-                      setTo(
-                        localDate(Math.min(summary.onset!.end ?? now, now)),
-                      );
-                    }}
-                  >
-                    This illness
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setFrom(localDate(now));
-                    setTo(localDate(now));
-                  }}
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => {
-                    setFrom(localDate(now - 6 * 86400000));
-                    setTo(localDate(now));
-                  }}
-                >
-                  Last 7 days
-                </button>
-                <button
-                  onClick={() => {
-                    setFrom("");
-                    setTo("");
-                  }}
-                >
-                  All time
-                </button>
-              </div>
-              <label>
-                Include
-                <select value={type} onChange={(e) => setType(e.target.value)}>
-                  {FILTERS.map((f) => (
-                    <option key={f.value} value={f.value}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {!rangeValid && (
-                <p role="alert" className="form-error">
-                  The end date must be on or after the start date.
-                </p>
-              )}
-              <button
-                className="button primary"
-                disabled={!rangeValid || !filtered.length}
-                onClick={() => setShareOpen(true)}
-              >
-                <Share2 size={16} />
-                Share care
-              </button>
-              <button
-                className="button secondary"
-                onClick={copy}
-                disabled={!rangeValid}
-              >
-                <Copy size={16} />
-                Copy report
-              </button>
-              <div className="button-group">
-                <button
-                  className="button secondary"
-                  disabled={!rangeValid}
-                  onClick={() => {
-                    downloadFile(
-                      report,
-                      `kiddymeds-${child.name.replace(/[^a-zA-Z0-9]/g, "-")}-${localDate(now)}.txt`,
-                    );
-                    notify("Report downloaded.");
-                  }}
-                >
-                  <ArrowDownToLine size={16} />
-                  Download
-                </button>
-                <button
-                  className="button secondary"
-                  disabled={!rangeValid}
-                  onClick={() => window.print()}
-                >
-                  <Printer size={16} />
-                  Print / PDF
-                </button>
-              </div>
-            </div>
-          </section>
-          <div className="report-tip">
-            <ShieldCheck size={19} />
-            <p>
-              Nothing is sent automatically. You decide when and how to share
-              your child’s care records.
-            </p>
-          </div>
-        </div>
-        <section className="card report-preview">
-          <div className="print-report">
-            <VisitSummaryCard key={child.id} child={child} summary={summary} />
-            <div className="report-preview-top">
-              <span className="eyebrow">EVERY ENTRY</span>
-              <span className="pill-label">{filtered.length} entries</span>
-            </div>
-            <div className="print-brand">
-              <Heart size={18} />
-              KiddyMeds
-            </div>
-            <h2>{child.name}’s care log</h2>
-            <p className="report-period">
-              {from ? prettyDay(from) : "Beginning"} –{" "}
-              {to ? prettyDay(to) : "Today"}
-            </p>
-            <div className="report-totals">
-              <span>
-                <strong>
-                  {filtered.filter((l) => l.type === "MEDICINE").length}
-                </strong>{" "}
-                medicine entries
-              </span>
-              <span>
-                <strong>
-                  {filtered.filter((l) => l.type === "SYMPTOM").length}
-                </strong>{" "}
-                symptoms
-              </span>
-              <span>
-                <strong>
-                  {
-                    filtered.filter(
-                      (l) => l.type === "METRIC" && !isStatusLog(l),
-                    ).length
-                  }
-                </strong>{" "}
-                check-ins
-              </span>
-            </div>
-            {copyFallback ? (
-              <textarea
-                className="report-text"
-                readOnly
-                value={report}
-                ref={textRef}
-                onFocus={(e) => e.currentTarget.select()}
-                aria-label="Report text to copy"
-                autoFocus
+        {mode === "custom" && (
+          <div className="form-grid report-dates">
+            <label>
+              From
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo || undefined}
+                onChange={(e) => setCustomFrom(e.target.value)}
               />
-            ) : (
-              <pre className="report-text">
-                {logReport.split("\n").slice(4).join("\n")}
-              </pre>
-            )}
+            </label>
+            <label>
+              To
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+              />
+            </label>
           </div>
-        </section>
+        )}
+        {!rangeValid && (
+          <p role="alert" className="form-error">
+            The end date must be on or after the start date.
+          </p>
+        )}
       </div>
-      {shareOpen && (
-        <ShareCare
-          childId={child.id}
-          from={from}
-          to={to}
-          type={type}
-          onClose={() => setShareOpen(false)}
-        />
-      )}
+      <section className="card report-preview">
+        <div className="print-report">
+          <VisitSummaryCard key={child.id} child={child} summary={summary} />
+        </div>
+        <div className="report-actions">
+          <button
+            className="button secondary"
+            onClick={copy}
+            disabled={!rangeValid}
+          >
+            <Copy size={16} />
+            Copy summary
+          </button>
+          <button
+            className="button secondary"
+            disabled={!rangeValid}
+            onClick={() => window.print()}
+          >
+            <Printer size={16} />
+            Print / PDF
+          </button>
+        </div>
+        {copyFallback && (
+          <textarea
+            className="report-text"
+            readOnly
+            value={text}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label="Summary text to copy"
+            autoFocus
+          />
+        )}
+        <p className="report-tip">
+          <ShieldCheck size={17} />
+          Nothing is sent automatically. To share or export every entry, use{" "}
+          <Link href="/history/">History</Link>.
+        </p>
+      </section>
     </div>
   );
 }

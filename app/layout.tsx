@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AttestationGate } from "@/components/attestation-gate";
 import { CareProvider } from "@/components/care-provider";
 import "./globals.css";
 
@@ -26,7 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <CareProvider>{children}</CareProvider>
+        <CareProvider>
+          <AttestationGate>{children}</AttestationGate>
+        </CareProvider>
       </body>
     </html>
   );

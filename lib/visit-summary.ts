@@ -382,7 +382,8 @@ export function buildVisitSummary(
   }
   return {
     onset: findOnset(allLogs, Math.min(rangeEnd, now), now),
-    rows,
+    // Only what caregivers recorded, including "checked, not seen".
+    rows: rows.filter((r) => r.status !== "not-recorded"),
     others: [...otherNames].map(
       ([name, days]) => `${name} ${dayRanges(days, now)}`,
     ),
@@ -419,6 +420,7 @@ export function visitSummaryText(
     `SICK-VISIT SUMMARY — ${child.name}${age ? `, ${age}` : ""}`,
     summary.onset ? summary.onset.label : "Illness start not marked",
     "",
+    ...(summary.rows.length ? [] : ["Nothing recorded in these dates."]),
     ...summary.rows.map(
       (r) =>
         `${r.label}: ${r.primary}${r.secondary ? ` (${r.secondary})` : ""}`,

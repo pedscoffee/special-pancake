@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:3000",
+      "localStorage": [
+        {
+          "name": "kiddymeds-attestation",
+          "value": "{\"version\":\"2026-11-27\",\"acceptedAt\":\"2026-11-27T10:00:00.000Z\"}"
+        }
+      ]
+    }
+  ]
+}

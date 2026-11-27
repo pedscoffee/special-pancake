@@ -39,7 +39,7 @@ export function CalendarAlertButton({
   );
 }
 
-function CalendarAlertDialog({
+export function CalendarAlertDialog({
   log,
   target,
   onClose,

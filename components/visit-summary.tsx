@@ -74,7 +74,16 @@ export function VisitSummaryCard({
           ? summary.onset.label
           : "Illness start not marked. Use “Got sick” on the overview."}
       </p>
-      <dl className="visit-rows">
+      {!summary.rows.length && !summary.others.length && (
+        <p className="visit-empty">
+          Nothing recorded in these dates yet. Symptoms, check-ins and “not
+          seen” checks will show here.
+        </p>
+      )}
+      <dl
+        className="visit-rows"
+        hidden={!summary.rows.length && !summary.others.length}
+      >
         {summary.rows.map((row) => (
           <div key={row.key} className={`visit-row ${row.status}`}>
             <dt>{row.label}</dt>
@@ -134,7 +143,6 @@ export function VisitSummaryCard({
       <p className="visit-legend">
         <span className="noticed">Rust = noticed</span>
         <span className="none">None = checked, not seen</span>
-        <span className="not-recorded">Not recorded = no answer</span>
       </p>
       <p className="visit-disclaimer">
         Parent-recorded observations from KiddyMeds. Not medical advice.

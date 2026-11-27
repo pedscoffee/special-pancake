@@ -1,9 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
+import { addChildFromMenu, chooseChild } from "./helpers";
 
 async function start(page: Page) {
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Your child", exact: true }),
+    page.getByRole("button", { name: "Switch child (current: Your child)" }),
   ).toBeVisible();
 }
 
@@ -22,34 +23,23 @@ for (const kind of ["medicine", "daily check-in"]) {
     context,
   }) => {
     await start(page);
-    await page.getByRole("button", { name: "Add child", exact: true }).click();
-    await page.getByLabel("First name or nickname").fill("Oliver");
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Add child", exact: true })
-      .click();
-    await expect(page.getByRole("dialog")).not.toBeVisible();
-    await page.getByRole("button", { name: "Your child", exact: true }).click();
-    await expect(
-      page.getByRole("button", { name: "Your child", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
+    await addChildFromMenu(page, "Oliver");
+    await chooseChild(page, "Your child");
     const other = await context.newPage();
     await start(other);
     if (kind === "medicine") await medicine(page, "Pinned to this child");
     else {
       await page
-        .getByRole("button", {
-          name: "Daily check-in Meals, fluids & bathroom",
-        })
+        .getByRole("button", { name: "Daily check-in", exact: true })
         .click();
       await page
         .getByLabel("Drinking compared with usual")
         .selectOption("Usual amount");
     }
-    await other.getByRole("button", { name: "Oliver", exact: true }).click();
+    await chooseChild(other, "Oliver");
     await expect(
-      page.getByRole("button", { name: "Oliver", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
+      page.getByRole("button", { name: "Switch child (current: Oliver)" }),
+    ).toBeVisible();
     await expect(page.getByRole("dialog")).toContainText("Your child");
     await page
       .getByRole("button", {
@@ -75,7 +65,7 @@ test("a recovered temperature draft keeps its unit after preferences change", as
 }) => {
   await start(page);
   await page
-    .getByRole("button", { name: "Symptom The little things you notice" })
+    .getByRole("button", { name: "Log a symptom", exact: true })
     .click();
   await page.getByLabel("Symptom", { exact: true }).fill("Fever");
   await page.getByLabel("Temperature (°F) optional").fill("100.4");
@@ -87,7 +77,7 @@ test("a recovered temperature draft keeps its unit after preferences change", as
   ).toHaveAttribute("aria-pressed", "true");
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Symptom The little things you notice" })
+    .getByRole("button", { name: "Log a symptom", exact: true })
     .click();
   await expect(page.getByLabel("Temperature (°F) optional")).toHaveValue(
     "100.4",
@@ -101,19 +91,18 @@ test("a recovered temperature draft keeps its unit after preferences change", as
   expect(reading.temp).toBe("100.4");
 });
 
-test("all quick actions are visible before scrolling on a phone", async ({
+test("logging a medicine is visible before scrolling on a phone, and actions are tappable", async ({
   page,
 }, info) => {
   test.skip(info.project.name === "desktop", "Phone viewport check");
   await start(page);
-  for (const name of [
-    "Log a medicine",
-    "Symptom The little things you notice",
-    "Daily check-in Meals, fluids & bathroom",
-  ]) {
-    const action = page.getByRole("button", { name, exact: true });
-    await expect(action).toBeInViewport();
-    const box = await action.boundingBox();
+  await expect(
+    page.getByRole("button", { name: "Log a medicine", exact: true }),
+  ).toBeInViewport();
+  for (const name of ["Log a medicine", "Log a symptom", "Daily check-in"]) {
+    const box = await page
+      .getByRole("button", { name, exact: true })
+      .boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
 });
@@ -128,7 +117,9 @@ test("favorites load editable details, stay with their child, and survive backup
     .check();
   await page.getByRole("button", { name: "Save entry", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await page.reload();
+  // A favorite with a running clock is reached from the clock on the
+  // overview; the Medicines page lists every favorite.
+  await page.goto("/medicines/");
   await page
     .getByRole("region", { name: "Medicine favorites for Your child" })
     .getByRole("button", { name: "My medicine", exact: true })
@@ -152,16 +143,11 @@ test("favorites load editable details, stay with their child, and survive backup
   expect(saved.logs).toHaveLength(2);
   expect(saved.medicineFavorites).toHaveLength(1);
   expect(saved.medicineFavorites[0].dosage).toBe("Reviewed details");
-  await page.getByRole("button", { name: "Add child", exact: true }).click();
-  await page.getByLabel("First name or nickname").fill("Oliver");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Add child", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await addChildFromMenu(page, "Oliver");
   await expect(
     page.getByRole("region", { name: "Medicine favorites for Oliver" }),
   ).toHaveCount(0);
+  await page.goto("/");
   await medicine(page, "Other medicine");
   await expect(
     page.getByText("Favorites for Oliver", { exact: true }),
@@ -180,7 +166,7 @@ test("favorites load editable details, stay with their child, and survive backup
     JSON.parse(Buffer.concat(chunks).toString()).medicineFavorites,
   ).toEqual(saved.medicineFavorites);
   await page.goto("/medicines/");
-  await page.getByRole("button", { name: "Your child", exact: true }).click();
+  await chooseChild(page, "Your child");
   await page
     .getByRole("button", { name: "Remove My medicine favorite", exact: true })
     .click();
@@ -304,7 +290,7 @@ test("unfinished medicine and daily forms survive closing and reload, then clear
   await expect(page.getByLabel("Medicine name")).toHaveValue("");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page
-    .getByRole("button", { name: "Daily check-in Meals, fluids & bathroom" })
+    .getByRole("button", { name: "Daily check-in", exact: true })
     .click();
   await page
     .getByLabel("Eating or feeding compared with usual")
@@ -317,7 +303,7 @@ test("unfinished medicine and daily forms survive closing and reload, then clear
   await page.keyboard.press("Escape");
   await page.reload();
   await page
-    .getByRole("button", { name: "Daily check-in Meals, fluids & bathroom" })
+    .getByRole("button", { name: "Daily check-in", exact: true })
     .click();
   await expect(
     page.getByLabel("Eating or feeding compared with usual"),
@@ -329,7 +315,7 @@ test("unfinished medicine and daily forms survive closing and reload, then clear
   await page.getByRole("button", { name: "Save check-in" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page
-    .getByRole("button", { name: "Daily check-in Meals, fluids & bathroom" })
+    .getByRole("button", { name: "Daily check-in", exact: true })
     .click();
   await expect(
     page.getByLabel("Eating or feeding compared with usual"),

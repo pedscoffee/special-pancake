@@ -391,8 +391,11 @@ export function EntryForm({
           <>
             {loadedFavorite && (
               <p className="inline-note">
-                Favorite details loaded. Review the dose and interval against
-                your current care instructions.
+                {favorite?.id
+                  ? "Favorite details loaded."
+                  : "Details from the last entry loaded."}{" "}
+                Review the dose and interval against your current care
+                instructions.
               </p>
             )}
             {recent && (

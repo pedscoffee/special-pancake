@@ -6,7 +6,7 @@ test("a full daily check-in saves four sections together and remains individuall
 }, info) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Daily check-in Meals, fluids & bathroom" })
+    .getByRole("button", { name: "Daily check-in", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
     name: "Daily check-in",
@@ -82,8 +82,8 @@ test("a full daily check-in saves four sections together and remains individuall
     .fill("Small sips at lunch");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await page.goto("/reports/");
-  await expect(page.locator(".report-text")).toContainText(
+  await page.goto("/history/");
+  await expect(page.locator(".history-print .report-text")).toContainText(
     "Only small sips or short feeds · Today so far · Small sips at lunch",
   );
 });
@@ -131,7 +131,9 @@ test("a custom period requires context and a storage failure saves no part of th
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Check in", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Daily check-in", exact: true })
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog
     .getByLabel("Eating or feeding compared with usual")
@@ -213,11 +215,11 @@ test("specific observations and scoped symptom counts survive editing and report
   );
   await expect(dialog.getByLabel("Severity optional")).toHaveValue("");
   await dialog.getByRole("button", { name: "Close dialog" }).click();
-  await page.goto("/reports/");
-  await expect(page.locator(".report-text")).toContainText(
+  await page.goto("/history/");
+  await expect(page.locator(".history-print .report-text")).toContainText(
     "Cough sound: Wet or mucusy · How often: In bouts",
   );
-  await expect(page.locator(".report-text")).toContainText(
+  await expect(page.locator(".history-print .report-text")).toContainText(
     "Vomiting episodes: 2 · Count covers: Today so far · Keeping fluids down: Some",
   );
   const stored = await page.evaluate(
