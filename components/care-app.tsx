@@ -12,7 +12,6 @@ import {
   Heart,
   House,
   LayoutGrid,
-  ListFilter,
   Pill,
   CalendarPlus,
   Pencil,
@@ -55,7 +54,7 @@ import {
 import { EntryForm } from "./entry-form";
 import { DailyCheckInForm } from "./daily-checkin-form";
 import { ChildForm } from "./child-form";
-import { CareStatus, StatusForm } from "./care-status";
+import { CareStatus, GotSickLine, StatusForm } from "./care-status";
 import { InstallPrompt } from "./install-prompt";
 import { QuickNegatives } from "./quick-negatives";
 import { ChildMenu } from "./child-menu";
@@ -344,13 +343,6 @@ export function CareApp({ view }: { view: View }) {
                 "You’re offline"
               )}
             </span>
-            <Link
-              href="/settings/"
-              className="icon-button"
-              aria-label="Settings"
-            >
-              <Settings2 size={20} />
-            </Link>
             {ready && db && activeChild && (
               <ChildMenu
                 onAdd={() => setPopup({ kind: "child" })}
@@ -666,46 +658,42 @@ function Overview({
       <CareStatus child={child} logs={logs} />
       {!demo && <InstallPrompt hasRecords={!!db?.logs.length} />}
       <OverviewMedicines child={child} logs={logs} add={add} edit={edit} />
+      <GotSickLine child={child} logs={logs} />
       <TodayCard child={child} logs={logs} add={add} />
-      <section className="card activity-card">
-        <SectionHeading
-          title="Recent care"
-          aside={
-            <Link className="text-button" href="/history/">
-              View history <ArrowRight size={14} />
-            </Link>
-          }
-        />
-        {logs.length ? (
-          <EntryList logs={logs.slice(0, 5)} onEdit={edit} compact />
-        ) : (
-          <EmptyState
-            title="Every little moment matters."
-            text="Log a medicine or symptom to start your child’s care story."
-            action={
-              !demo ? (
-                <button className="text-button" onClick={startDemo}>
-                  Explore an example <ArrowRight size={14} />
-                </button>
-              ) : undefined
+      {logs.length > 0 && (
+        <section className="card activity-card">
+          <SectionHeading
+            title="Recent care"
+            aside={
+              <Link className="text-button" href="/history/">
+                View history <ArrowRight size={14} />
+              </Link>
             }
           />
-        )}
-      </section>
-      <div className="welcome-card">
-        <div>
-          <h2>
-            {child.name === "Your child"
-              ? "Their care, in good hands."
-              : `${child.name}’s care, in good hands.`}
-          </h2>
-          <p>
-            Medicines, symptoms, and all the in-between. <br />
-            You take care of them. We’ll help with the remembering.
-          </p>
+          <EntryList logs={logs.slice(0, 5)} onEdit={edit} compact />
+        </section>
+      )}
+      {!logs.length && (
+        <div className="welcome-card">
+          <div>
+            <h2>
+              {child.name === "Your child"
+                ? "Their care, in good hands."
+                : `${child.name}’s care, in good hands.`}
+            </h2>
+            <p>
+              Medicines, symptoms, and all the in-between. <br />
+              You take care of them. We’ll help with the remembering.
+            </p>
+            {!demo && (
+              <button className="text-button" onClick={startDemo}>
+                Explore an example <ArrowRight size={14} />
+              </button>
+            )}
+          </div>
+          <Garden />
         </div>
-        <Garden />
-      </div>
+      )}
     </>
   );
 }
@@ -960,35 +948,14 @@ function TodayCard({
           </small>
         </div>
       </div>
-      <div className="today-checks">
-        {METRICS.map((m, i) => {
-          const last = today.find(
-            (l) => l.type === "METRIC" && l.data.metricType === m.key,
-          );
-          const Icon = [Utensils, Droplets, Droplets, Bath][i];
-          return (
-            <button
-              className="daily-check"
-              key={m.key}
-              onClick={() => add("METRIC", m.key)}
-            >
-              <Icon size={18} strokeWidth={1.6} />
-              <span>{m.name}</span>
-              <span className={`daily-value ${last ? "recorded" : ""}`}>
-                {last?.data.value || "Add check-in"}
-              </span>
-              <ChevronRight size={13} />
-            </button>
-          );
-        })}
-      </div>
     </section>
   );
 }
 
+/** Medicines page: only clocks with time still to run (the overview has all). */
 export function TimerPanel({ logs }: { logs: Log[] }) {
   const { db, now } = useCare();
-  const timers = runningTimers(logs, now);
+  const timers = runningTimers(logs, now).filter((t) => t.remaining > 0);
   return (
     <section className="card timer-panel">
       <SectionHeading title="Medicine clocks" />
@@ -1089,13 +1056,7 @@ function MedicineFavorites({
   const favorites = (db?.medicineFavorites || []).filter(
     (item) => item.childId === child?.id,
   );
-  if (!favorites.length)
-    return compact ? null : (
-      <p className="field-hint favorites-hint">
-        Save a favorite when logging a medicine to reuse your own recorded
-        details for {child?.name}.
-      </p>
-    );
+  if (!favorites.length) return null;
   return (
     <section
       className="card medicine-favorites"
@@ -1153,8 +1114,8 @@ function MedicinesView({
   add: EntryAction;
   edit: (log: Log) => void;
 }) {
-  const { db, update } = useCare();
-  const [showAll, setShowAll] = useState(false);
+  const { db, update, now } = useCare();
+  const running = runningTimers(logs, now).some((t) => t.remaining > 0);
   const medicineLogs = logs.filter((l) => l.type === "MEDICINE");
   const all = [
     ...MEDICINES,
@@ -1177,65 +1138,61 @@ function MedicinesView({
         </button>
       </div>
       <MedicineFavorites add={add} />
-      <div className="medicine-grid">
-        {(showAll ? all : all.slice(0, 4)).map((m) => (
-          <div className="medicine-tile" key={m.name}>
+      <section className="card shortcut-card" aria-label="Medicine shortcuts">
+        <ul className="shortcut-list">
+          {all.map((m) => (
+            <li className="shortcut-row" key={m.name}>
+              <button
+                className="shortcut-main"
+                aria-label={`Log a dose of ${m.name}`}
+                onClick={() => add("MEDICINE", m.name)}
+              >
+                <IconBox icon={Pill} color={m.color} small />
+                <span>
+                  <strong>{m.name}</strong>
+                  <small>{m.detail}</small>
+                </span>
+                <Plus size={16} aria-hidden="true" />
+              </button>
+              {db!.customMedicines.includes(m.name) && (
+                <button
+                  className="icon-button"
+                  aria-label={`Remove ${m.name} shortcut`}
+                  onClick={() =>
+                    update(
+                      (database) => ({
+                        ...database,
+                        customMedicines: database.customMedicines.filter(
+                          (n) => n !== m.name,
+                        ),
+                      }),
+                      "Shortcut removed. Care records kept.",
+                    )
+                  }
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </li>
+          ))}
+          <li className="shortcut-row">
             <button
-              className="medicine-tile-main"
-              onClick={() => add("MEDICINE", m.name)}
+              className="shortcut-main shortcut-custom"
+              onClick={() => add("MEDICINE")}
             >
-              <IconBox icon={Pill} color={m.color} />
-              <strong>{m.name}</strong>
-              <span>{m.detail}</span>
-              <span className="tile-action">
-                Log a dose <Plus size={15} />
+              <span className="custom-plus" aria-hidden="true">
+                <Plus size={18} strokeWidth={1.6} />
+              </span>
+              <span>
+                <strong>Something else?</strong>
+                <small>Add your own medicine</small>
               </span>
             </button>
-            {db!.customMedicines.includes(m.name) && (
-              <button
-                className="remove-shortcut icon-button"
-                aria-label={`Remove ${m.name} shortcut`}
-                onClick={() =>
-                  update(
-                    (database) => ({
-                      ...database,
-                      customMedicines: database.customMedicines.filter(
-                        (n) => n !== m.name,
-                      ),
-                    }),
-                    "Shortcut removed. Care records kept.",
-                  )
-                }
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        ))}
-        <button
-          className="medicine-tile custom-tile"
-          onClick={() => add("MEDICINE")}
-        >
-          <span className="custom-plus">
-            <Plus size={25} strokeWidth={1.5} />
-          </span>
-          <strong>Something else?</strong>
-          <span>Add your own medicine</span>
-        </button>
-      </div>
-      {all.length > 4 && (
-        <button
-          className="text-button show-all"
-          onClick={() => setShowAll(!showAll)}
-        >
-          {showAll
-            ? "Show fewer medicines"
-            : `Show all ${all.length} medicines`}
-          <ListFilter size={14} />
-        </button>
-      )}
-      <div className="medicines-lower">
-        <TimerPanel logs={logs} />
+          </li>
+        </ul>
+      </section>
+      <div className={`medicines-lower ${running ? "" : "single"}`}>
+        {running && <TimerPanel logs={logs} />}
         <section className="card">
           <SectionHeading
             title="Recent doses"
@@ -1284,7 +1241,6 @@ function SymptomsView({
           Log symptom
         </button>
       </div>
-      {childId && <QuickNegatives childId={childId} logs={logs} />}
       <div className="symptom-controls">
         <div className="search-field">
           <Search size={17} aria-hidden="true" />
@@ -1340,6 +1296,7 @@ function SymptomsView({
           </button>
         </div>
       )}
+      {childId && <QuickNegatives childId={childId} logs={logs} />}
       <div className="symptoms-lower">
         <section className="card">
           <SectionHeading

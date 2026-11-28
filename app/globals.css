@@ -3614,3 +3614,91 @@ button.illness-bar:hover {
     break-inside: avoid;
   }
 }
+
+/* Medicines: compact shortcut list */
+.shortcut-card {
+  padding: 6px;
+  margin-bottom: 18px;
+}
+.shortcut-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 2px 8px;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.shortcut-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.shortcut-main:hover {
+  background: #f3f6f4;
+}
+.shortcut-main > span:not(.icon-box):not(.custom-plus) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.shortcut-main strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.shortcut-main small {
+  color: #5d6762;
+  font-size: 12px;
+}
+.shortcut-main > svg:last-child {
+  color: var(--sage);
+  flex-shrink: 0;
+}
+.shortcut-custom .custom-plus {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.medicines-lower.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.privacy-line {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: #5d6762;
+}
+.privacy-line svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--sage);
+}
+a.child-menu-item {
+  text-decoration: none;
+}
+.illness-bar.quiet {
+  margin-bottom: 18px;
+}
+.history-export {
+  margin-top: 10px;
+}
