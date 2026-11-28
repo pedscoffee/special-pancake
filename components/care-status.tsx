@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Check, HeartPulse, Pill, Send, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  HeartPulse,
+  Pencil,
+  Pill,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
-import { HandoffSheet } from "./handoff-sheet";
 import {
   formatTime,
   ILLNESS_METRIC,
@@ -19,6 +26,9 @@ import { activeIllness } from "@/lib/visit-summary";
 import type { Child, Log, MedicineResponse } from "@/lib/types";
 
 const ASKED_KEY = "kiddymeds-response-later";
+const STILL_SICK_KEY = "kiddymeds-still-sick";
+/** After this long with nothing logged, ask whether the child is better. */
+export const QUIET_BEFORE_ASKING = 48 * 3600000;
 function askedLater(): string[] {
   try {
     return JSON.parse(sessionStorage.getItem(ASKED_KEY) || "[]");
@@ -26,14 +36,46 @@ function askedLater(): string[] {
     return [];
   }
 }
+function stillSickAnswers(): Record<string, number> {
+  try {
+    const value = JSON.parse(localStorage.getItem(STILL_SICK_KEY) || "{}");
+    return value && typeof value === "object" ? value : {};
+  } catch {
+    return {};
+  }
+}
 
-/** Overview card: illness start/end, and "Did it help?" after a recent medicine. */
+/**
+ * Overview card: a slim illness line, "Did it help?" after a recent medicine,
+ * and "Feeling better?" once nothing has been logged for two days.
+ */
 export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
   const { db, now, update, saving } = useCare();
   const [marking, setMarking] = useState<null | "start" | "end">(null);
-  const [handoff, setHandoff] = useState(false);
+  const [options, setOptions] = useState(false);
+  const [editStart, setEditStart] = useState<Log | null>(null);
   const [later, setLater] = useState<string[]>(askedLater);
+  const [stillSick, setStillSick] =
+    useState<Record<string, number>>(stillSickAnswers);
   const illness = activeIllness(logs, now);
+  const startLog = illness
+    ? logs.find(
+        (l) =>
+          l.type === "METRIC" &&
+          l.data.metricType === ILLNESS_METRIC &&
+          l.data.value === ILLNESS_VALUES.start &&
+          l.timeGiven === illness.start,
+      )
+    : undefined;
+  // Feeling better? Asked only once the log has gone quiet for two days.
+  const lastActivity = illness
+    ? Math.max(
+        illness.start,
+        stillSick[String(illness.start)] || 0,
+        ...logs.map((l) => l.timeGiven),
+      )
+    : 0;
+  const askBetter = !!illness && now - lastActivity >= QUIET_BEFORE_ASKING;
   // Ask about the latest medicine given 30 minutes to a day ago.
   const ask = logs.find(
     (l) =>
@@ -61,43 +103,75 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
       sessionStorage.setItem(ASKED_KEY, JSON.stringify(next));
     } catch {}
   }
+  function stillSickNow() {
+    if (!illness) return;
+    const next = { ...stillSick, [String(illness.start)]: Date.now() };
+    setStillSick(next);
+    try {
+      localStorage.setItem(STILL_SICK_KEY, JSON.stringify(next));
+    } catch {}
+  }
   return (
     <>
       <section className="care-status" aria-label="Illness and follow-up">
-        <div className={`illness-bar ${illness ? "sick" : ""}`}>
-          <HeartPulse size={18} aria-hidden="true" />
-          <span>
-            {illness ? (
-              <>
-                <strong>{illness.label}</strong>
-                <small>The report starts from this day.</small>
-              </>
-            ) : (
-              <>
-                <strong>Is {child.name} sick?</strong>
-                <small>Mark when it started so reports show the onset.</small>
-              </>
-            )}
-          </span>
-          <div className="illness-actions">
-            {illness && (
-              <button
-                className="button secondary"
-                onClick={() => setHandoff(true)}
-              >
-                <Send size={16} />
-                Hand off
-              </button>
-            )}
+        {askBetter && illness ? (
+          <div
+            className="followup-card better-card"
+            role="group"
+            aria-labelledby="ask-better"
+          >
+            <HeartPulse size={18} aria-hidden="true" />
+            <div>
+              <strong id="ask-better">Is {child.name} feeling better?</strong>
+              <small>Nothing logged in 2 days. {illness.label}.</small>
+              <div className="followup-buttons">
+                <button
+                  className="button primary"
+                  disabled={saving}
+                  onClick={() => setMarking("end")}
+                >
+                  Feeling better
+                </button>
+                <button
+                  className="button secondary"
+                  disabled={saving}
+                  onClick={stillSickNow}
+                >
+                  Still sick
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : illness ? (
+          <button
+            className="illness-bar sick"
+            aria-haspopup="dialog"
+            aria-label={`${illness.label}. Illness options`}
+            onClick={() => setOptions(true)}
+          >
+            <HeartPulse size={18} aria-hidden="true" />
+            <span>
+              <strong>{illness.label}</strong>
+              <small>The report starts from this day.</small>
+            </span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        ) : (
+          <div className="illness-bar">
+            <HeartPulse size={18} aria-hidden="true" />
+            <span>
+              <strong>Is {child.name} sick?</strong>
+              <small>Mark when it started for the report.</small>
+            </span>
             <button
-              className="button secondary"
+              className="button secondary small"
               disabled={saving}
-              onClick={() => setMarking(illness ? "end" : "start")}
+              onClick={() => setMarking("start")}
             >
-              {illness ? "Feeling better" : "Got sick"}
+              Got sick
             </button>
           </div>
-        </div>
+        )}
         {ask && (
           <div
             className="followup-card"
@@ -114,7 +188,7 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
                 {relativeTime(ask.timeGiven, now)}. Your answer goes in the
                 doctor report.
               </small>
-              <div className="followup-buttons">
+              <div className="followup-buttons response-buttons">
                 {MEDICINE_RESPONSES.map((r) => (
                   <button
                     key={r.value}
@@ -137,11 +211,43 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
           </div>
         )}
       </section>
-      {handoff && (
-        <HandoffSheet
-          child={child}
-          logs={logs}
-          onClose={() => setHandoff(false)}
+      {options && illness && (
+        <Modal
+          title={illness.label}
+          subtitle="Mark the end of this illness, or fix when it started."
+          onClose={() => setOptions(false)}
+        >
+          <div className="clock-sheet">
+            <button
+              className="button primary"
+              onClick={() => {
+                setOptions(false);
+                setMarking("end");
+              }}
+            >
+              <Check size={16} />
+              {child.name} is feeling better
+            </button>
+            {startLog && (
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setOptions(false);
+                  setEditStart(startLog);
+                }}
+              >
+                <Pencil size={16} />
+                Change when it started
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
+      {editStart && (
+        <StatusForm
+          childId={child.id}
+          log={editStart}
+          onClose={() => setEditStart(null)}
         />
       )}
       {marking && (

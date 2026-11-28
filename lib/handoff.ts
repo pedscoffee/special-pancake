@@ -1,4 +1,4 @@
-import { parseCareShare, type CareShare } from "./sharing";
+import { parseCareShare, readCareFile, type CareShare } from "./sharing";
 import type { Log } from "./types";
 
 /**
@@ -106,4 +106,24 @@ export async function decodeHandoff(fragment: string): Promise<CareShare> {
 
 export function handoffUrl(origin: string, payload: string) {
   return `${origin}${HANDOFF_PATH}#${payload}`;
+}
+
+/**
+ * Read care pasted by hand: a hand-off link (from a message, so it may carry
+ * extra words, line breaks or a lost "https://"), or a shared care file's text.
+ */
+export async function readPastedCare(text: string): Promise<CareShare> {
+  // Rejoin a link a message app wrapped across lines; spaces still end it.
+  const joined = text.replace(/[ \t]*[\r\n]+[ \t]*/g, "");
+  const link = joined.match(/#(c1\.[A-Za-z0-9_-]+)/);
+  if (link) return decodeHandoff(link[1]);
+  if (!text.trim())
+    throw new Error("Paste the hand-off link someone sent you.");
+  try {
+    return readCareFile(text);
+  } catch {
+    throw new Error(
+      "That doesn’t look like a KiddyMeds hand-off link. Copy the whole link from the message and try again.",
+    );
+  }
 }

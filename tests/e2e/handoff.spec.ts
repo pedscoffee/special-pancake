@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { openChildMenu } from "./helpers";
 
 async function makeLink(page: Page) {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -28,7 +29,12 @@ async function makeLink(page: Page) {
   await dialog.getByRole("button", { name: "Save entry" }).click();
   await expect(dialog).not.toBeVisible();
 
-  await page.getByRole("button", { name: "Hand off" }).click();
+  await expect(page.getByRole("button", { name: "Hand off" })).toHaveCount(0);
+  await (
+    await openChildMenu(page)
+  )
+    .getByRole("button", { name: "Hand off Your child’s care" })
+    .click();
   const sheet = page.getByRole("dialog", { name: /^Hand off/ });
   await expect(
     sheet.getByRole("button", { name: "This illness" }),
@@ -89,7 +95,9 @@ test("a hand-off link opens for someone new, and saving asks for the agreement f
   await recipient.getByRole("button", { name: "Continue" }).click();
   const review = recipient.getByRole("dialog", { name: "Receive shared care" });
   await expect(review).toContainText("Notes aren’t included");
-  await review.getByLabel("Receive for").selectOption("new");
+  // A brand-new phone: the received child is the only option and replaces
+  // the empty "Your child" placeholder.
+  await expect(review.getByLabel("Receive for")).toHaveValue("new");
   await review.getByRole("button", { name: "Add shared care" }).click();
   await expect(
     recipient.getByRole("heading", {
@@ -100,6 +108,8 @@ test("a hand-off link opens for someone new, and saving asks for the agreement f
     JSON.parse(localStorage.getItem("kiddymeds_db_v2")!),
   );
   expect(saved.logs).toHaveLength(3);
+  expect(saved.children).toHaveLength(1);
+  expect(saved.settings.activeChildId).toBe(saved.children[0].id);
   await other.close();
 
   // Opening your own link back: everything is already here, notes are kept.
@@ -110,6 +120,52 @@ test("a hand-off link opens for someone new, and saving asks for the agreement f
     "3 already here",
   );
   await expect(back.getByLabel("Import review")).toContainText("0 differ");
+});
+
+test("a Home Screen app receives a hand-off by pasting the link, and opens that child", async ({
+  page,
+  browser,
+}, info) => {
+  const url = await makeLink(page);
+  const other = await browser.newContext({
+    ...(info.project.use.viewport
+      ? { viewport: info.project.use.viewport }
+      : {}),
+    storageState: "tests/e2e/attested.json",
+  });
+  const recipient = await other.newPage();
+  await recipient.goto("/");
+  await expect(
+    recipient.getByRole("button", { name: /^Switch child/ }),
+  ).toBeVisible();
+  // Someone who already has a child of their own.
+  await recipient.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("kiddymeds_db_v2")!);
+    db.children[0].name = "Theo";
+    localStorage.setItem("kiddymeds_db_v2", JSON.stringify(db));
+  });
+  await recipient.reload();
+  await (
+    await openChildMenu(recipient)
+  )
+    .getByRole("button", { name: "Receive care" })
+    .click();
+  const dialog = recipient.getByRole("dialog", { name: "Receive care" });
+  await dialog
+    .getByRole("textbox")
+    .fill(`Here’s the update: ${url.replace("http://", "")} thanks`);
+  await dialog.getByRole("button", { name: "Open link" }).click();
+  const review = recipient.getByRole("dialog", { name: "Receive shared care" });
+  await review.getByLabel("Receive for").selectOption("new");
+  await review.getByRole("button", { name: "Add shared care" }).click();
+  await expect(review).not.toBeVisible();
+  await expect(
+    recipient.getByRole("button", {
+      name: "Switch child (current: Your child)",
+    }),
+  ).toBeVisible();
+  await expect(recipient.getByText(/^Sick since/)).toBeVisible();
+  await other.close();
 });
 
 test("a damaged link explains itself", async ({ page }) => {

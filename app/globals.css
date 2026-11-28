@@ -2326,8 +2326,15 @@ textarea {
   .topbar-right {
     gap: 12px;
   }
-  .local-status {
-    font-size: 9px;
+  /* "Saved on this device" is the normal state; on phones only problems,
+     offline and preview mode take header space. */
+  .local-status:has(.local-status-text) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   .main-content {
     padding: 28px 22px 100px;
@@ -2339,8 +2346,11 @@ textarea {
     font-size: 9px;
     letter-spacing: 1.3px;
   }
+  .page-heading {
+    margin-bottom: 16px;
+  }
   .page-heading p {
-    font-size: 12px;
+    display: none;
   }
   h1 {
     font-size: 27px;
@@ -2952,9 +2962,30 @@ textarea {
 }
 .illness-bar .button {
   flex-shrink: 0;
+  white-space: nowrap;
+}
+button.illness-bar {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.illness-bar > svg:last-child {
+  color: #8a3b12;
+}
+button.illness-bar:hover {
+  border-color: #ecc7b4;
 }
 .followup-card {
   align-items: flex-start;
+}
+.better-card {
+  background: #fdf3ee;
+  border-color: #f4dccf;
+}
+.better-card > svg {
+  color: #8a3b12;
 }
 .followup-buttons {
   display: flex;
@@ -3010,11 +3041,15 @@ textarea {
   .visit-row {
     grid-template-columns: 80px minmax(0, 1fr);
   }
-  .illness-bar {
-    flex-wrap: wrap;
+  .illness-bar small {
+    font-size: 12px;
   }
-  .illness-bar .button {
-    width: 100%;
+  .response-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .followup-card {
+    padding: 12px 10px 12px 14px;
   }
 }
 .install-prompt {
@@ -3389,11 +3424,6 @@ textarea {
   }
 }
 /* Hand-off by link or QR */
-.illness-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 .handoff-sheet {
   display: grid;
   gap: 14px;

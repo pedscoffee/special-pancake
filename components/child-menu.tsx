@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Pencil, Plus } from "lucide-react";
+import { Check, Download, Pencil, Plus, Send } from "lucide-react";
 import { useCare } from "./care-provider";
 import type { Child } from "@/lib/types";
 
@@ -9,9 +9,13 @@ import type { Child } from "@/lib/types";
 export function ChildMenu({
   onAdd,
   onEdit,
+  onHandoff,
+  onReceive,
 }: {
   onAdd: () => void;
   onEdit: (child: Child) => void;
+  onHandoff: (child: Child) => void;
+  onReceive: () => void;
 }) {
   const { db, update } = useCare();
   const [open, setOpen] = useState(false);
@@ -39,6 +43,7 @@ export function ChildMenu({
   const active =
     children.find((c) => c.id === db?.settings.activeChildId) || children[0];
   if (!active) return null;
+  const hasCare = !!db?.logs.some((log) => log.childId === active.id);
   return (
     <div className="child-menu" ref={ref}>
       <button
@@ -103,6 +108,30 @@ export function ChildMenu({
             >
               <Plus size={15} aria-hidden="true" />
               Add child
+            </button>
+          </div>
+          <div className="child-menu-actions" role="group" aria-label="Share">
+            {hasCare && (
+              <button
+                className="child-menu-item"
+                onClick={() => {
+                  setOpen(false);
+                  onHandoff(active);
+                }}
+              >
+                <Send size={15} aria-hidden="true" />
+                Hand off {active.name}’s care
+              </button>
+            )}
+            <button
+              className="child-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onReceive();
+              }}
+            >
+              <Download size={15} aria-hidden="true" />
+              Receive care
             </button>
           </div>
         </div>

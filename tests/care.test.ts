@@ -9,6 +9,7 @@ import {
   logTitle,
   makeReport,
   medicineTimers,
+  runningTimers,
   parseDatabase,
   demoDatabase,
 } from "../lib/care";
@@ -423,4 +424,21 @@ test("reports include doses, temperature units, check-ins and notes in chronolog
   assert.ok(report.includes("Recorded dose"));
   assert.ok(report.indexOf("Fluids") < report.indexOf("Fever"));
   assert.ok(report.indexOf("Fever") < report.indexOf("Tylenol"));
+});
+
+test("clocks step aside a day after their recorded interval passes", () => {
+  const now = Date.UTC(2026, 10, 28, 12);
+  const log = (id: string, name: string, hoursAgo: number): Log => ({
+    id,
+    childId: "c",
+    type: "MEDICINE",
+    timeGiven: now - hoursAgo * 3600000,
+    timestamp: now,
+    data: { medicineName: name, frequencyHours: 6 },
+  });
+  const names = runningTimers(
+    [log("a", "Tylenol", 2), log("b", "Motrin", 20), log("c", "Zyrtec", 40)],
+    now,
+  ).map((t) => t.log.data.medicineName);
+  assert.deepEqual(names, ["Motrin", "Tylenol"]);
 });
