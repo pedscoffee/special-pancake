@@ -72,6 +72,7 @@ test("share preview, email draft, readable download and receiving preserve local
   const source = fixture();
   await seed(page, source);
   await page.goto("/history/");
+  await page.getByRole("button", { name: "Export…" }).click();
   await page
     .getByRole("button", { name: "Share care file", exact: true })
     .click();
@@ -211,6 +212,7 @@ test("native share receives the selected snapshot; cancellation and unsupported 
     .getByRole("group", { name: "Filter by record type" })
     .getByRole("button", { name: "Symptoms", exact: true })
     .click();
+  await page.getByRole("button", { name: "Export…" }).click();
   await page
     .getByRole("button", { name: "Share care file", exact: true })
     .click();
@@ -359,6 +361,7 @@ test("desktop fallback lets users copy the message when the share sheet is unava
     });
   });
   await page.goto("/history/");
+  await page.getByRole("button", { name: "Export…" }).click();
   await page
     .getByRole("button", { name: "Share care file", exact: true })
     .click();

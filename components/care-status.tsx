@@ -46,6 +46,63 @@ function stillSickAnswers(): Record<string, number> {
 }
 
 /**
+ * Symptoms logged in the last two days (since any "feeling better") make
+ * "Is … sick?" worth the top of the overview; otherwise it sits lower down.
+ */
+export function suggestIllness(logs: Log[], now: number) {
+  if (activeIllness(logs, now)) return false;
+  const lastEnd = Math.max(
+    0,
+    ...logs
+      .filter(
+        (l) =>
+          l.type === "METRIC" &&
+          l.data.metricType === ILLNESS_METRIC &&
+          l.data.value === ILLNESS_VALUES.end,
+      )
+      .map((l) => l.timeGiven),
+  );
+  return logs.some(
+    (l) =>
+      l.type === "SYMPTOM" &&
+      l.timeGiven > lastEnd &&
+      now - l.timeGiven <= QUIET_BEFORE_ASKING,
+  );
+}
+
+/** "Is … sick?" lower on the overview when nothing suggests an illness. */
+export function GotSickLine({ child, logs }: { child: Child; logs: Log[] }) {
+  const { now, saving } = useCare();
+  const [marking, setMarking] = useState(false);
+  if (activeIllness(logs, now) || suggestIllness(logs, now)) return null;
+  return (
+    <>
+      <div className="illness-bar quiet">
+        <HeartPulse size={18} aria-hidden="true" />
+        <span>
+          <strong>Is {child.name} sick?</strong>
+          <small>Mark when it started for the report.</small>
+        </span>
+        <button
+          className="button secondary small"
+          disabled={saving}
+          onClick={() => setMarking(true)}
+        >
+          Got sick
+        </button>
+      </div>
+      {marking && (
+        <StatusForm
+          childId={child.id}
+          value={ILLNESS_VALUES.start}
+          onClose={() => setMarking(false)}
+        />
+      )}
+    </>
+  );
+}
+
+/**
  * Overview card: a slim illness line, "Did it help?" after a recent medicine,
  * and "Feeling better?" once nothing has been logged for two days.
  */
@@ -156,12 +213,12 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
             </span>
             <ChevronRight size={16} aria-hidden="true" />
           </button>
-        ) : (
+        ) : suggestIllness(logs, now) ? (
           <div className="illness-bar">
             <HeartPulse size={18} aria-hidden="true" />
             <span>
               <strong>Is {child.name} sick?</strong>
-              <small>Mark when it started for the report.</small>
+              <small>Symptoms were logged. Mark when it started.</small>
             </span>
             <button
               className="button secondary small"
@@ -171,7 +228,7 @@ export function CareStatus({ child, logs }: { child: Child; logs: Log[] }) {
               Got sick
             </button>
           </div>
-        )}
+        ) : null}
         {ask && (
           <div
             className="followup-card"

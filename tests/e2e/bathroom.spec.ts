@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 test("urine records offer all five observations, optional diaper counts and editable reports", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/symptoms/");
   const dialog = page.getByRole("dialog");
   const choices = [
     "More than usual",
@@ -64,7 +64,7 @@ test("urine records offer all five observations, optional diaper counts and edit
 test("stool counts and descriptions persist, export and handle zero output", async ({
   page,
 }, info) => {
-  await page.goto("/");
+  await page.goto("/symptoms/");
   await page
     .getByRole("button", { name: /^Stool / })
     .first()
@@ -113,6 +113,7 @@ test("stool counts and descriptions persist, export and handle zero output", asy
   await dialog.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   const downloaded = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export…" }).click();
   await page.getByRole("button", { name: "Export CSV", exact: true }).click();
   const download = await downloaded;
   expect(await readFile((await download.path())!, "utf8")).toContain(
@@ -122,7 +123,7 @@ test("stool counts and descriptions persist, export and handle zero output", asy
   await expect(page.locator(".history-print .report-text")).toContainText(
     "2 bowel movements · 1 stool diaper · Mushy",
   );
-  await page.goto("/");
+  await page.goto("/symptoms/");
   await page
     .getByRole("button", { name: /^Stool / })
     .first()
@@ -145,7 +146,7 @@ test("stool counts and descriptions persist, export and handle zero output", asy
 test("switching categories clears irrelevant fields and custom periods need notes", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/symptoms/");
   await page
     .getByRole("button", { name: /^Stool / })
     .first()
