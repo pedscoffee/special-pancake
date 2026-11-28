@@ -5,8 +5,10 @@ import {
   encodeHandoff,
   QR_MAX_LENGTH,
   handoffUrl,
+  readPastedCare,
 } from "../lib/handoff";
 import {
+  careFileText,
   makeCareShare,
   mergeCareShare,
   planCareMerge,
@@ -80,4 +82,27 @@ test("receiving your own entries back without notes is a duplicate, and keeps yo
   assert.equal(after.timeGiven, local.timeGiven - 60000);
   assert.ok(local.data.notes);
   assert.equal(after.data.notes, local.data.notes);
+});
+
+test("a pasted hand-off link opens even with message text, wrapping or a missing https://", async () => {
+  const db = demoDatabase(now);
+  const share = makeCareShare(db, db.children[0].id, "", "", "all", now);
+  const url = handoffUrl(
+    "https://kiddymeds.example",
+    await encodeHandoff(share),
+  );
+  const wrapped = `Here’s Ella’s update: ${url.replace("https://", "").slice(0, 60)}\n${url.slice(60 + 8)} thanks!`;
+  for (const text of [url, `  ${url}\n`, wrapped]) {
+    const received = await readPastedCare(text);
+    assert.equal(received.child.id, share.child.id);
+    assert.equal(received.logs.length, share.logs.length);
+  }
+  // A care file's text works too.
+  const file = await readPastedCare(
+    careFileText(share, db.settings, "https://kiddymeds.example/"),
+  );
+  assert.equal(file.logs.length, share.logs.length);
+  await assert.rejects(readPastedCare("hello"), /hand-off link/);
+  await assert.rejects(readPastedCare("   "), /Paste/);
+  await assert.rejects(readPastedCare(`${url.slice(0, -20)}`), /damaged/);
 });

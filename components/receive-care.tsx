@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent } from "react";
-import { Upload, ArrowRight } from "lucide-react";
+import { ArrowRight, ClipboardPaste, Download, Upload } from "lucide-react";
+import { readPastedCare } from "@/lib/handoff";
 import { logDetail, logTitle } from "@/lib/care";
 import {
   mergeCareShare,
+  onlyPlaceholderChild,
   planCareMerge,
   readCareFile,
   recordSignature,
@@ -14,14 +16,59 @@ import {
 import { useCare } from "./care-provider";
 import { Modal } from "./ui";
 
+/** History's button: opens the receive dialog. */
 export function ReceiveCare() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="button secondary" onClick={() => setOpen(true)}>
+        <Download size={16} />
+        Receive care
+      </button>
+      {open && <ReceiveDialog onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * Receive care by pasting a hand-off link or choosing a care file. Pasting
+ * matters for Home Screen apps: a tapped link opens the browser, not the app.
+ */
+export function ReceiveDialog({ onClose }: { onClose: () => void }) {
   const { db } = useCare();
   const [pending, setPending] = useState<CareShare | null>(null);
+  const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const canPaste =
+    typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
   if (!db) return null;
 
+  async function open(value: string) {
+    setError("");
+    setReading(true);
+    try {
+      setPending(await readPastedCare(value));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "This link couldn’t be read.",
+      );
+    } finally {
+      setReading(false);
+    }
+  }
+  async function pasteFromClipboard() {
+    setError("");
+    try {
+      const value = await navigator.clipboard.readText();
+      setText(value);
+      if (value.trim()) await open(value);
+      else setError("Your clipboard is empty. Copy the link first.");
+    } catch {
+      setError("Paste the link into the box below instead.");
+    }
+  }
   async function read(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -42,41 +89,88 @@ export function ReceiveCare() {
       setReading(false);
     }
   }
+  if (pending)
+    return (
+      <ReceiveReview key={pending.sharedAt} share={pending} onClose={onClose} />
+    );
   return (
-    <>
-      <button
-        className="button secondary"
-        disabled={reading}
-        onClick={() => {
-          setError("");
-          input.current?.click();
+    <Modal
+      title="Receive care"
+      subtitle="Add care someone shared with you to this device."
+      onClose={onClose}
+    >
+      <form
+        className="form-stack"
+        onSubmit={(e) => {
+          e.preventDefault();
+          open(text);
         }}
       >
-        <Upload size={16} />
-        {reading ? "Reading care file…" : "Receive care"}
-      </button>
-      <input
-        ref={input}
-        type="file"
-        accept=".txt,.json,text/plain,application/json"
-        className="sr-only"
-        tabIndex={-1}
-        aria-label="Choose shared care file"
-        onChange={read}
-      />
-      {error && !pending && (
-        <p className="form-error" role="alert">
-          {error}
+        {canPaste && (
+          <button
+            type="button"
+            className="button primary"
+            disabled={reading}
+            onClick={pasteFromClipboard}
+          >
+            <ClipboardPaste size={16} />
+            Paste hand-off link
+          </button>
+        )}
+        <label>
+          {canPaste ? "Or paste it here" : "Hand-off link"}
+          <textarea
+            rows={3}
+            value={text}
+            maxLength={200000}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="https://…/handoff/#c1…"
+          />
+        </label>
+        <p className="field-hint">
+          Using KiddyMeds from your Home Screen? Tapping a link opens your
+          browser instead. Copy the link from the message and paste it here.
         </p>
-      )}
-      {pending && (
-        <ReceiveReview
-          key={pending.sharedAt}
-          share={pending}
-          onClose={() => setPending(null)}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="button secondary"
+            disabled={reading}
+            onClick={() => {
+              setError("");
+              input.current?.click();
+            }}
+          >
+            <Upload size={16} />
+            Choose a care file
+          </button>
+          <button
+            type="submit"
+            className="button primary"
+            disabled={reading || !text.trim()}
+          >
+            <ArrowRight size={16} />
+            {reading ? "Opening…" : "Open link"}
+          </button>
+        </div>
+        <input
+          ref={input}
+          type="file"
+          accept=".txt,.json,text/plain,application/json"
+          className="sr-only"
+          tabIndex={-1}
+          aria-label="Choose shared care file"
+          onChange={read}
         />
-      )}
-    </>
+      </form>
+    </Modal>
   );
 }
 
@@ -95,8 +189,11 @@ export function ReceiveReview({
   const [target, setTarget] = useState(() =>
     db?.children.some((c) => c.id === share.child.id)
       ? `existing:${share.child.id}`
-      : "",
+      : db && onlyPlaceholderChild(db)
+        ? "new"
+        : "",
   );
+  const placeholder = !!db && onlyPlaceholderChild(db);
   const [choices, setChoices] = useState<Record<string, ConflictChoice>>({});
   const [error, setError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -202,17 +299,20 @@ export function ReceiveReview({
                   Add {pending.child.name} as a new child
                 </option>
               )}
-            {db.children.map((c) => (
-              <option key={c.id} value={`existing:${c.id}`}>
-                {c.name} (existing profile)
-              </option>
-            ))}
+            {!placeholder &&
+              db.children.map((c) => (
+                <option key={c.id} value={`existing:${c.id}`}>
+                  {c.name} (existing profile)
+                </option>
+              ))}
           </select>
         </label>
-        <p className="field-hint">
-          Choose their existing profile if this child is already in your app.
-          Names alone aren’t used to match children.
-        </p>
+        {!placeholder && (
+          <p className="field-hint">
+            Choose their existing profile if this child is already in your app.
+            Names alone aren’t used to match children.
+          </p>
+        )}
         {plan && (
           <>
             <div className="receive-counts" aria-label="Import review">

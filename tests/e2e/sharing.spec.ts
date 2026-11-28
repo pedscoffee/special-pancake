@@ -54,6 +54,8 @@ async function seed(page: Page, db: Database) {
   }, db);
 }
 async function received(page: Page, text: string) {
+  if (!(await page.getByRole("dialog", { name: "Receive care" }).count()))
+    await page.getByRole("button", { name: "Receive care" }).click();
   await page.getByLabel("Choose shared care file").setInputFiles({
     name: "shared-care.txt",
     mimeType: "text/plain",
@@ -165,7 +167,11 @@ test("share preview, email draft, readable download and receiving preserve local
   );
   expect(merged.logs).toHaveLength(3);
   expect(merged.children).toEqual(recipient.children);
-  expect(merged.settings).toEqual(recipient.settings);
+  // Receiving opens the child who received care; other preferences stay.
+  expect(merged.settings).toEqual({
+    ...recipient.settings,
+    activeChildId: "my-ella",
+  });
   expect(
     merged.logs.find((l: { id: string }) => l.id === "fever").childId,
   ).toBe("my-ella");
@@ -286,6 +292,14 @@ test("receiving validates files and requires a choice for differing records", as
   await page.goto("/history/");
   const before = await page.evaluate(() =>
     localStorage.getItem("kiddymeds_db_v2"),
+  );
+  await page.getByRole("button", { name: "Receive care" }).click();
+  // A pasted message that isn't a hand-off link explains itself.
+  const receive = page.getByRole("dialog", { name: "Receive care" });
+  await receive.getByRole("textbox").fill("see you at 5");
+  await receive.getByRole("button", { name: "Open link" }).click();
+  await expect(receive.getByRole("alert")).toContainText(
+    "doesn’t look like a KiddyMeds hand-off link",
   );
   await page.getByLabel("Choose shared care file").setInputFiles({
     name: "broken.txt",
@@ -416,7 +430,11 @@ test("receiving a new child saves only after storage accepts the merge", async (
   );
   expect(merged.children).toHaveLength(2);
   expect(merged.logs).toHaveLength(3);
-  expect(merged.settings).toEqual(recipient.settings);
+  // Receiving opens the new child; other preferences stay the same.
+  expect(merged.settings).toEqual({
+    ...recipient.settings,
+    activeChildId: "ella",
+  });
   expect(
     merged.logs.find((l: { id: string }) => l.id === "other-child"),
   ).toEqual(recipient.logs[0]);

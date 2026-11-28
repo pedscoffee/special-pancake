@@ -38,7 +38,7 @@ import {
   localDate,
   MEDICINES,
   METRICS,
-  medicineTimers,
+  runningTimers,
   todayLogs,
 } from "@/lib/care";
 import { filterSymptoms, SYMPTOM_GROUPS } from "@/lib/symptoms";
@@ -59,6 +59,8 @@ import { CareStatus, StatusForm } from "./care-status";
 import { InstallPrompt } from "./install-prompt";
 import { QuickNegatives } from "./quick-negatives";
 import { ChildMenu } from "./child-menu";
+import { HandoffSheet } from "./handoff-sheet";
+import { ReceiveDialog } from "./receive-care";
 import { CalendarAlertButton, CalendarAlertDialog } from "./calendar-alert";
 import { HistoryView, ReportsView, SettingsView } from "./record-views";
 
@@ -85,6 +87,8 @@ type Popup =
       favorite?: MedicineFavorite;
     }
   | { kind: "child"; child?: Child }
+  | { kind: "handoff"; child: Child }
+  | { kind: "receive" }
   | { kind: "status"; log: Log }
   | { kind: "delete-log"; log: Log }
   | { kind: "delete-child"; child: Child; logs: Log[] };
@@ -328,15 +332,17 @@ export function CareApp({ view }: { view: View }) {
               ) : (
                 <WifiOff size={14} />
               )}
-              {!ready
-                ? "Getting ready…"
-                : problem
-                  ? "Storage needs attention"
-                  : demo
-                    ? "Preview mode"
-                    : online
-                      ? "Saved on this device"
-                      : "You’re offline"}
+              {!ready ? (
+                "Getting ready…"
+              ) : problem ? (
+                "Storage needs attention"
+              ) : demo ? (
+                "Preview mode"
+              ) : online ? (
+                <span className="local-status-text">Saved on this device</span>
+              ) : (
+                "You’re offline"
+              )}
             </span>
             <Link
               href="/settings/"
@@ -349,6 +355,8 @@ export function CareApp({ view }: { view: View }) {
               <ChildMenu
                 onAdd={() => setPopup({ kind: "child" })}
                 onEdit={(child) => setPopup({ kind: "child", child })}
+                onHandoff={(child) => setPopup({ kind: "handoff", child })}
+                onReceive={() => setPopup({ kind: "receive" })}
               />
             )}
           </div>
@@ -511,6 +519,16 @@ export function CareApp({ view }: { view: View }) {
           onClose={() => setPopup(null)}
           onDelete={(log) => setPopup({ kind: "delete-log", log })}
         />
+      )}
+      {popup?.kind === "handoff" && db && (
+        <HandoffSheet
+          child={popup.child}
+          logs={childLogs(db, popup.child.id)}
+          onClose={() => setPopup(null)}
+        />
+      )}
+      {popup?.kind === "receive" && (
+        <ReceiveDialog onClose={() => setPopup(null)} />
       )}
       {popup?.kind === "daily-checkin" && activeChild && (
         <DailyCheckInForm
@@ -710,7 +728,7 @@ function OverviewMedicines({
     log: Log;
     target: number;
   } | null>(null);
-  const timers = medicineTimers(logs, now);
+  const timers = runningTimers(logs, now);
   const clockNames = new Set(
     timers.map((t) => t.log.data.medicineName!.trim().toLowerCase()),
   );
@@ -970,7 +988,7 @@ function TodayCard({
 
 export function TimerPanel({ logs }: { logs: Log[] }) {
   const { db, now } = useCare();
-  const timers = medicineTimers(logs, now);
+  const timers = runningTimers(logs, now);
   return (
     <section className="card timer-panel">
       <SectionHeading title="Medicine clocks" />

@@ -6,6 +6,7 @@ import {
   careShareMessage,
   makeCareShare,
   mergeCareShare,
+  onlyPlaceholderChild,
   parseCareShare,
   planCareMerge,
   readCareFile,
@@ -185,7 +186,10 @@ test("merging preserves other children, local records and personal preferences, 
   const merged = mergeCareShare(receiver, share, "recipient-child", {});
   assert.equal(JSON.stringify(receiver), before);
   assert.equal(merged.logs.length, 4);
-  assert.deepEqual(merged.settings, receiver.settings);
+  assert.deepEqual(merged.settings, {
+    ...receiver.settings,
+    activeChildId: "recipient-child",
+  });
   assert.deepEqual(merged.children, receiver.children);
   assert.deepEqual(merged.customMedicines, receiver.customMedicines);
   assert.equal(merged.logs.find((l) => l.id === "fever")!.data.tempUnit, "C");
@@ -246,4 +250,31 @@ test("differing entries require an explicit current choice rather than silently 
       medicine: { keep: "incoming", localSignature },
     }),
   );
+});
+
+test("receiving a new child on a fresh device replaces the empty placeholder and opens the child", () => {
+  const source = db();
+  const share = makeCareShare(source, "ella", day, day, "all", now);
+  const fresh = db();
+  fresh.children = [{ id: "placeholder", name: "Your child", color: "sage" }];
+  fresh.logs = [];
+  fresh.medicineFavorites = [];
+  fresh.settings = { ...fresh.settings, activeChildId: "placeholder" };
+  assert.equal(onlyPlaceholderChild(fresh), true);
+  const merged = mergeCareShare(fresh, share, null, {});
+  assert.deepEqual(
+    merged.children.map((c) => c.id),
+    ["ella"],
+  );
+  assert.equal(merged.settings.activeChildId, "ella");
+
+  // A placeholder with care in it is a real profile and stays.
+  fresh.logs = [{ ...source.logs[0], id: "mine", childId: "placeholder" }];
+  assert.equal(onlyPlaceholderChild(fresh), false);
+  const kept = mergeCareShare(fresh, share, null, {});
+  assert.deepEqual(
+    kept.children.map((c) => c.id),
+    ["placeholder", "ella"],
+  );
+  assert.equal(kept.settings.activeChildId, "ella");
 });

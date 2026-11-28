@@ -261,6 +261,21 @@ export function planCareMerge(
   return plan;
 }
 
+/**
+ * A brand-new device has one automatic "Your child" profile with nothing in
+ * it. Receiving a new child replaces it instead of leaving an empty extra.
+ */
+export function onlyPlaceholderChild(db: Database) {
+  if (db.children.length !== 1) return false;
+  const [child] = db.children;
+  return (
+    child.name === "Your child" &&
+    !child.birthday &&
+    !db.logs.some((log) => log.childId === child.id) &&
+    !(db.medicineFavorites || []).some((f) => f.childId === child.id)
+  );
+}
+
 export function mergeCareShare(
   db: Database,
   share: CareShare,
@@ -292,14 +307,20 @@ export function mergeCareShare(
     if (choice.keep === "incoming")
       replacements.set(conflict.local.id, conflict.incoming);
   }
+  const children = !newChild
+    ? db.children
+    : onlyPlaceholderChild(db)
+      ? [share.child]
+      : [...db.children, share.child];
   return parseDatabase({
     ...db,
-    children: newChild ? [...db.children, share.child] : db.children,
+    children,
     logs: [
       ...db.logs.map((log) => replacements.get(log.id) || log),
       ...plan.added,
     ],
-    // Sharing never changes personal preferences or medicine shortcuts.
-    settings: db.settings,
+    // Sharing never changes personal preferences or medicine shortcuts; it
+    // only opens the child who just received care.
+    settings: { ...db.settings, activeChildId: childId },
   });
 }

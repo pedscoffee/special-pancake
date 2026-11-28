@@ -95,11 +95,69 @@ test("a family records an illness and the report summarizes it for the doctor", 
   expect(copied).not.toContain("EVERY ENTRY");
   expect(copied).not.toContain("Rash");
 
-  // Feeling better closes the illness.
+  // Feeling better closes the illness, from the illness line's options.
   await page.goto("/");
-  await page.getByRole("button", { name: "Feeling better" }).click();
+  await expect(
+    page.getByRole("button", { name: "Feeling better", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: /Illness options$/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Your child is feeling better" })
+    .click();
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("button", { name: "Got sick" })).toBeVisible();
+});
+
+test("after two quiet days the overview asks whether the child is better", async ({
+  page,
+}) => {
+  await start(page);
+  await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("kiddymeds_db_v2")!);
+    const childId = db.children[0].id;
+    const at = Date.now() - 3 * 86400000;
+    db.logs.push(
+      {
+        id: "ill",
+        childId,
+        type: "METRIC",
+        timeGiven: at,
+        timestamp: at,
+        data: { metricType: "illness", value: "Started" },
+      },
+      {
+        id: "fever",
+        childId,
+        type: "SYMPTOM",
+        timeGiven: at + 3600000,
+        timestamp: at,
+        data: { symptomName: "Fever", temp: "101", tempUnit: "F" },
+      },
+    );
+    localStorage.setItem("kiddymeds_db_v2", JSON.stringify(db));
+  });
+  await page.reload();
+  const ask = page.getByRole("group", {
+    name: "Is Your child feeling better?",
+  });
+  await expect(ask).toBeVisible();
+  // Still sick waits for two more quiet days.
+  await ask.getByRole("button", { name: "Still sick" }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Illness options$/ }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(ask).toHaveCount(0);
+  // Feeling better ends the illness.
+  await page.evaluate(() => localStorage.removeItem("kiddymeds-still-sick"));
+  await page.reload();
+  await ask.getByRole("button", { name: "Feeling better" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByRole("button", { name: "Got sick", exact: true }),
+  ).toBeVisible();
 });
 
 test("the overview asks whether a recent medicine helped", async ({ page }) => {

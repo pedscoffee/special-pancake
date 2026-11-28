@@ -599,6 +599,11 @@ export function medicineTimers(logs: Log[], now: number) {
     })
     .sort((a, b) => a.target - b.target);
 }
+/** A clock stays up for a day after its interval passes, then steps aside. */
+export const CLOCK_GRACE = 24 * 3600000;
+export function runningTimers(logs: Log[], now: number) {
+  return medicineTimers(logs, now).filter((t) => t.remaining > -CLOCK_GRACE);
+}
 export function filterLogs(
   logs: Log[],
   {
