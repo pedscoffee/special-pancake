@@ -19,6 +19,11 @@ export type CareShare = {
   from: string;
   to: string;
   logs: Log[];
+  /**
+   * Set only by hand-off links, which leave notes out. Entries are then compared
+   * without notes, and notes already on this device are never removed.
+   */
+  notesOmitted?: boolean;
 };
 export type ConflictChoice = {
   keep: "local" | "incoming";
@@ -228,17 +233,30 @@ export function planCareMerge(
 ): MergePlan {
   const plan: MergePlan = { added: [], duplicates: [], conflicts: [] };
   const existing = new Map(db.logs.map((log) => [log.id, log]));
+  const withoutNotes = (log: Log) => ({
+    ...log,
+    data: { ...log.data, notes: undefined },
+  });
+  const compare = (log: Log) =>
+    recordSignature(share.notesOmitted ? withoutNotes(log) : log);
   for (const source of share.logs) {
-    const incoming = { ...source, childId };
+    let incoming = { ...source, childId };
     const local = existing.get(incoming.id);
     if (!local) plan.added.push(incoming);
     else if (local.childId !== childId)
       throw new Error(
         "Some of these records already belong to another child. Choose that profile to receive this file.",
       );
-    else if (recordSignature(local) === recordSignature(incoming))
-      plan.duplicates.push(incoming);
-    else plan.conflicts.push({ local, incoming });
+    else {
+      // A hand-off never erases notes kept on this device.
+      if (share.notesOmitted && local.data.notes)
+        incoming = {
+          ...incoming,
+          data: { ...incoming.data, notes: local.data.notes },
+        };
+      if (compare(local) === compare(incoming)) plan.duplicates.push(incoming);
+      else plan.conflicts.push({ local, incoming });
+    }
   }
   return plan;
 }
