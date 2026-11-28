@@ -50,7 +50,10 @@ test("capture the redesigned dashboard", async ({ page }, info) => {
     .click();
   await page.locator('a[href="/"]').filter({ visible: true }).first().click();
   await expect(
-    page.getByRole("heading", { name: "Ella’s care, in good hands." }),
+    page.getByRole("button", { name: "Switch child (current: Ella)" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Recent care" }),
   ).toBeVisible();
   await page.screenshot({
     path: `docs/previews/${info.project.name}.png`,

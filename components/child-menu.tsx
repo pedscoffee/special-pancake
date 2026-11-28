@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Download, Pencil, Plus, Send } from "lucide-react";
+import Link from "next/link";
+import { Check, Download, Pencil, Plus, Send, Settings2 } from "lucide-react";
 import { useCare } from "./care-provider";
 import type { Child } from "@/lib/types";
 
@@ -133,6 +134,16 @@ export function ChildMenu({
               <Download size={15} aria-hidden="true" />
               Receive care
             </button>
+          </div>
+          <div className="child-menu-actions">
+            <Link
+              href="/settings/"
+              className="child-menu-item"
+              onClick={() => setOpen(false)}
+            >
+              <Settings2 size={15} aria-hidden="true" />
+              Settings &amp; backups
+            </Link>
           </div>
         </div>
       )}

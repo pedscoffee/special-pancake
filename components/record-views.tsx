@@ -6,7 +6,6 @@ import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   ArrowDownToLine,
   ArrowRight,
-  Check,
   ChevronRight,
   Copy,
   Heart,
@@ -69,6 +68,7 @@ export function HistoryView({
   const { db, now, notify } = useCare();
   const [shareOpen, setShareOpen] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [copyFallback, setCopyFallback] = useState(false);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
@@ -299,7 +299,6 @@ export function HistoryView({
                 " Search narrows copy, download and print, but not Share care."}
             </p>
           </div>
-          <ReceiveCare />
         </div>
         {!rangeValid && (
           <p role="alert" className="form-error">
@@ -315,53 +314,72 @@ export function HistoryView({
             <Send size={16} />
             Hand off by link or QR
           </button>
+          <ReceiveCare />
           <button
             className="button secondary"
-            disabled={!rangeValid || !filtered.length}
-            onClick={() => setShareOpen(true)}
-          >
-            <Share2 size={16} />
-            Share care file
-          </button>
-          <button
-            className="button secondary"
-            onClick={copy}
-            disabled={!rangeValid || !filtered.length}
-          >
-            <Copy size={16} />
-            Copy entries
-          </button>
-          <button
-            className="button secondary"
-            disabled={!rangeValid || !filtered.length}
-            onClick={() => {
-              downloadFile(
-                report,
-                `kiddymeds-${child.name.replace(/[^a-zA-Z0-9]/g, "-")}-${localDate(now)}.txt`,
-              );
-              notify("Entries downloaded.");
-            }}
+            aria-expanded={exportOpen}
+            aria-controls="history-export"
+            onClick={() => setExportOpen(!exportOpen)}
           >
             <ArrowDownToLine size={16} />
-            Download
-          </button>
-          <button
-            className="button secondary"
-            onClick={csv}
-            disabled={!filtered.length}
-          >
-            <ArrowDownToLine size={16} />
-            Export CSV
-          </button>
-          <button
-            className="button secondary"
-            disabled={!rangeValid || !filtered.length}
-            onClick={() => window.print()}
-          >
-            <Printer size={16} />
-            Print / PDF
+            Export…
           </button>
         </div>
+        {exportOpen && (
+          <div
+            className="history-share-actions history-export"
+            id="history-export"
+            role="group"
+            aria-label="Export"
+          >
+            <button
+              className="button secondary"
+              disabled={!rangeValid || !filtered.length}
+              onClick={() => setShareOpen(true)}
+            >
+              <Share2 size={16} />
+              Share care file
+            </button>
+            <button
+              className="button secondary"
+              onClick={copy}
+              disabled={!rangeValid || !filtered.length}
+            >
+              <Copy size={16} />
+              Copy entries
+            </button>
+            <button
+              className="button secondary"
+              disabled={!rangeValid || !filtered.length}
+              onClick={() => {
+                downloadFile(
+                  report,
+                  `kiddymeds-${child.name.replace(/[^a-zA-Z0-9]/g, "-")}-${localDate(now)}.txt`,
+                );
+                notify("Entries downloaded.");
+              }}
+            >
+              <ArrowDownToLine size={16} />
+              Download
+            </button>
+            <button
+              className="button secondary"
+              onClick={csv}
+              disabled={!filtered.length}
+            >
+              <ArrowDownToLine size={16} />
+              Export CSV
+            </button>
+            <button
+              className="button secondary"
+              disabled={!rangeValid || !filtered.length}
+              onClick={() => window.print()}
+            >
+              <Printer size={16} />
+              Print / PDF
+            </button>
+          </div>
+        )}
         {copyFallback && (
           <textarea
             className="report-text"
@@ -762,6 +780,15 @@ export function SettingsView({
               Backups include every child, care record, and preference. Original
               KiddyMeds backups are supported.
             </p>
+            <p className="privacy-line">
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span>
+                <strong>Private by design.</strong> No account, no server, no
+                tracking. Works offline. Anyone using this device and browser
+                can see these records, and KiddyMeds doesn’t encrypt them or
+                your backups.
+              </span>
+            </p>
             {importError && (
               <p role="alert" className="form-error">
                 {importError}
@@ -812,39 +839,6 @@ export function SettingsView({
           </section>
         </div>
         <aside className="settings-aside">
-          <section className="card privacy-explanation">
-            <span className="privacy-shield">
-              <ShieldCheck size={32} strokeWidth={1.4} />
-            </span>
-            <h2>
-              Private by design.
-              <br />
-              Peace of mind included.
-            </h2>
-            <p>
-              No account to create. No family records sent to a server. No
-              analytics or tracking scripts.
-            </p>
-            <ul>
-              <li>
-                <Check size={16} />
-                Saved in this browser
-              </li>
-              <li>
-                <Check size={16} />
-                Works offline after the first visit
-              </li>
-              <li>
-                <Check size={16} />
-                You choose what to share
-              </li>
-            </ul>
-            <p className="field-hint">
-              People with access to this device and browser can access these
-              records. Local storage and downloaded backups aren’t encrypted by
-              KiddyMeds.
-            </p>
-          </section>
           <section className="card demo-card">
             <CirclePlay size={22} />
             <h3>A little look around?</h3>

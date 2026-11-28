@@ -139,6 +139,7 @@ test("daily check-ins, history search, and reports include care notes", async ({
     "Water at breakfast",
   );
   const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export…" }).click();
   await page.getByRole("button", { name: "Download", exact: true }).click();
   expect((await download).suggestedFilename()).toMatch(/kiddymeds-.*\.txt$/);
 });
@@ -154,7 +155,10 @@ test("demo changes never overwrite family records", async ({ page }) => {
     .click();
   await page.locator('a[href="/"]').filter({ visible: true }).first().click();
   await expect(
-    page.getByRole("heading", { name: "Ella’s care, in good hands." }),
+    page.getByRole("button", { name: "Switch child (current: Ella)" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Recent care" }),
   ).toBeVisible();
   await logMedicine(page, "Demo only medicine");
   await expect(

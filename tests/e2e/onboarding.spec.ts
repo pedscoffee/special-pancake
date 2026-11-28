@@ -128,7 +128,14 @@ test("History shares and exports what its filters show", async ({ page }) => {
   await expect(page.locator(".history-print .report-text")).not.toContainText(
     "Fluids",
   );
-  await expect(share.getByRole("button", { name: "Share care" })).toBeEnabled();
+  // Hand off and Receive stay up front; the rest sit under Export.
+  await expect(
+    share.getByRole("button", { name: "Share care file" }),
+  ).toHaveCount(0);
+  await share.getByRole("button", { name: "Export…" }).click();
+  await expect(
+    share.getByRole("button", { name: "Share care file" }),
+  ).toBeEnabled();
   await expect(
     share.getByRole("button", { name: "Receive care" }),
   ).toBeVisible();
